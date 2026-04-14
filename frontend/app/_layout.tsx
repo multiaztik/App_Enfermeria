@@ -1,6 +1,7 @@
 /**
- * Layout raíz de la aplicación
+ * Layout raíz de la aplicación — BitCare
  * Configura providers y navegación principal
+ * Sin ruta de scanner QR
  */
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,10 +13,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AssessmentProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: Colors.background },
+            headerStyle: { backgroundColor: Colors.surface },
             headerTintColor: Colors.text,
             headerTitleStyle: { fontWeight: '700' },
             contentStyle: { backgroundColor: Colors.background },
@@ -39,14 +40,6 @@ export default function RootLayout() {
             name="assessment/results"
             options={{
               title: 'Resultados',
-              headerBackTitle: 'Atrás',
-              presentation: 'modal',
-            }}
-          />
-          <Stack.Screen
-            name="scanner"
-            options={{
-              title: 'Escanear QR',
               headerBackTitle: 'Atrás',
               presentation: 'modal',
             }}

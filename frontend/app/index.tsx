@@ -1,9 +1,9 @@
 /**
- * Pantalla de Splash / Landing
- * Redirige a login o main tabs según estado de auth
+ * Pantalla de Splash / Landing — Diseño BitCare
+ * Logo con pin + cruz médica, fondo blanco, animación suave
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, FontSize, Spacing } from '../constants/colors';
@@ -11,40 +11,30 @@ import { Colors, FontSize, Spacing } from '../constants/colors';
 export default function SplashScreen() {
   const { isAuthenticated, isLoading } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(0.7)).current;
+  const barAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animación de entrada
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 4,
+        friction: 5,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Animación de pulso
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [fadeAnim, scaleAnim, pulseAnim]);
+    // Loading bar animation
+    Animated.timing(barAnim, {
+      toValue: 1,
+      duration: 1800,
+      useNativeDriver: false,
+    }).start();
+  }, [fadeAnim, scaleAnim, barAnim]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -59,29 +49,35 @@ export default function SplashScreen() {
     }
   }, [isLoading, isAuthenticated]);
 
+  const barWidth = barAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
     <View style={styles.container}>
       <Animated.View
         style={[
-          styles.logoContainer,
+          styles.logoSection,
           {
             opacity: fadeAnim,
             transform: [{ scale: scaleAnim }],
           },
         ]}
       >
-        <Animated.Text
-          style={[styles.logoIcon, { transform: [{ scale: pulseAnim }] }]}
-        >
-          🩺
-        </Animated.Text>
-        <Text style={styles.logoText}>NurseAssess</Text>
+        {/* Logo pin.png */}
+        <Image
+          source={require('../assets/icons/pin.png')}
+          style={styles.pinImage}
+          resizeMode="contain"
+        />
+        <Text style={styles.brandName}>BitCare</Text>
         <Text style={styles.subtitle}>Valoración Clínica Inteligente</Text>
       </Animated.View>
 
       <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
         <View style={styles.loadingBar}>
-          <Animated.View style={[styles.loadingFill]} />
+          <Animated.View style={[styles.loadingFill, { width: barWidth }]} />
         </View>
         <Text style={styles.version}>v1.0.0 • Patrones de Gordon</Text>
       </Animated.View>
@@ -92,29 +88,31 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoContainer: {
+  logoSection: {
     alignItems: 'center',
   },
-  logoIcon: {
-    fontSize: 72,
-    marginBottom: Spacing.xl,
+  pinImage: {
+    width: 100,
+    height: 100,
+    tintColor: Colors.primary,
+    marginBottom: Spacing.md,
   },
-  logoText: {
+  brandName: {
     fontSize: FontSize.huge,
+    fontWeight: '900',
     color: Colors.text,
-    fontWeight: '800',
-    letterSpacing: -1,
+    letterSpacing: -0.5,
+    marginTop: Spacing.md,
   },
   subtitle: {
     fontSize: FontSize.md,
-    color: Colors.primary,
+    color: Colors.textSecondary,
     fontWeight: '500',
-    marginTop: Spacing.sm,
-    letterSpacing: 1,
+    marginTop: Spacing.xs,
   },
   footer: {
     position: 'absolute',
@@ -122,18 +120,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingBar: {
-    width: 120,
-    height: 3,
+    width: 140,
+    height: 4,
     backgroundColor: Colors.card,
-    borderRadius: 1.5,
+    borderRadius: 2,
     overflow: 'hidden',
     marginBottom: Spacing.md,
   },
   loadingFill: {
-    width: '60%',
     height: '100%',
     backgroundColor: Colors.primary,
-    borderRadius: 1.5,
+    borderRadius: 2,
   },
   version: {
     fontSize: FontSize.xs,

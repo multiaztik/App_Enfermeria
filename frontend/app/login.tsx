@@ -1,6 +1,6 @@
 /**
- * Pantalla de Login
- * Diseño premium con glassmorphism y gradiente
+ * Pantalla de Login — Diseño BitCare
+ * Fondo blanco limpio, logo pin.png, botón negro
  */
 import React, { useState, useRef } from 'react';
 import {
@@ -14,36 +14,48 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../constants/colors';
+
+const PIN_ICON = require('../assets/icons/pin.png');
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   React.useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
   }, [fadeAnim, slideAnim]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu email y contraseña.');
+      Alert.alert('Campos requeridos', 'Por favor ingresa tu correo y contraseña.');
       return;
     }
     try {
       await login(email, password);
       router.replace('/(tabs)/home');
-    } catch {
-      Alert.alert('Error', 'Credenciales inválidas. Intenta nuevamente.');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Error al iniciar sesión';
+      Alert.alert(
+        'Error de acceso',
+        msg === 'Credenciales inválidas'
+          ? 'Correo o contraseña incorrectos. Verifica tus datos.'
+          : msg
+      );
     }
   };
 
@@ -52,82 +64,95 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.topSection}>
-        <Text style={styles.logoIcon}>🩺</Text>
-        <Text style={styles.logoText}>NurseAssess</Text>
-        <Text style={styles.tagline}>Valoración Clínica Inteligente</Text>
-      </View>
-
-      <Animated.View
-        style={[
-          styles.formCard,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.formTitle}>Iniciar Sesión</Text>
-        <Text style={styles.formSubtitle}>Ingresa tus credenciales institucionales</Text>
+        {/* Logo Section */}
+        <Animated.View style={[styles.logoSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          {/* Logo pin.png */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={PIN_ICON}
+              style={styles.pinImage}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.brandName}>BitCare</Text>
+          <Text style={styles.tagline}>Inicio de sesion</Text>
+        </Animated.View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>📧</Text>
+        {/* Formulario */}
+        <Animated.View style={[styles.formSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          {/* Campo Correo */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Correo</Text>
             <TextInput
-              style={styles.input}
-              placeholder="enfermero@uaz.edu.mx"
+              style={[styles.input, emailFocused && styles.inputFocused]}
+              placeholder="Su correo"
               placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
             />
           </View>
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>CONTRASEÑA</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔒</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={Colors.textMuted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={styles.showPassword}>{showPassword ? '🙈' : '👁️'}</Text>
-            </TouchableOpacity>
+          {/* Campo Contraseña */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Contraseña</Text>
+            <View style={[styles.inputWrapper, passFocused && styles.inputFocused]}>
+              <TextInput
+                style={styles.inputInner}
+                placeholder="Contraseña segura"
+                placeholderTextColor={Colors.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                onFocus={() => setPassFocused(true)}
+                onBlur={() => setPassFocused(false)}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-          onPress={handleLogin}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={styles.loginButtonText}>Ingresar</Text>
-          )}
-        </TouchableOpacity>
+          {/* Botón Iniciar */}
+          <TouchableOpacity
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.loginButtonText}>Inicio</Text>
+            )}
+          </TouchableOpacity>
 
-        <View style={styles.demoHint}>
-          <Text style={styles.demoHintText}>
-            💡 Demo: Ingresa cualquier email y contraseña
-          </Text>
-        </View>
-      </Animated.View>
-
-      <Text style={styles.footer}>
-        Patrones Funcionales de Gordon • MVP 2026
-      </Text>
+          {/* Enlace a registro */}
+          <TouchableOpacity
+            style={styles.registerLink}
+            onPress={() => router.push('/register')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.registerLinkText}>
+              ¿No tienes cuenta?{' '}
+              <Text style={styles.registerLinkBold}>Regístrate aquí</Text>
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -135,90 +160,92 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.huge,
   },
-  topSection: {
+  logoSection: {
     alignItems: 'center',
-    marginBottom: Spacing.xxxl,
+    marginBottom: Spacing.huge,
   },
-  logoIcon: {
-    fontSize: 56,
-    marginBottom: Spacing.md,
-  },
-  logoText: {
-    fontSize: FontSize.xxxl,
-    color: Colors.text,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  tagline: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: '500',
-    marginTop: Spacing.xs,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  formCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xxl,
-    padding: Spacing.xxl,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.medium,
-  },
-  formTitle: {
-    fontSize: FontSize.xxl,
-    color: Colors.text,
-    fontWeight: '700',
-    marginBottom: Spacing.xs,
-  },
-  formSubtitle: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xxl,
-  },
-  inputContainer: {
+  logoContainer: {
+    alignItems: 'center',
     marginBottom: Spacing.lg,
   },
-  inputLabel: {
-    fontSize: FontSize.xs,
+  pinImage: {
+    width: 80,
+    height: 80,
+    tintColor: Colors.primary,
+  },
+  brandName: {
+    fontSize: FontSize.xxxl,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+    marginTop: Spacing.sm,
+  },
+  tagline: {
+    fontSize: FontSize.md,
     color: Colors.textSecondary,
-    fontWeight: '700',
-    letterSpacing: 1,
+    marginTop: Spacing.xs,
+  },
+  formSection: {
+    width: '100%',
+  },
+  fieldGroup: {
+    marginBottom: Spacing.xl,
+  },
+  fieldLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.text,
+    fontWeight: '600',
     marginBottom: Spacing.sm,
+  },
+  input: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
+    fontSize: FontSize.md,
+    color: Colors.text,
+  },
+  inputFocused: {
+    borderColor: Colors.primary,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.lg,
-    borderWidth: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
     borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: Spacing.md,
-  },
-  input: {
+  inputInner: {
     flex: 1,
     paddingVertical: Spacing.md + 2,
     fontSize: FontSize.md,
     color: Colors.text,
   },
-  showPassword: {
-    fontSize: 18,
+  eyeButton: {
     padding: Spacing.xs,
+  },
+  eyeIcon: {
+    fontSize: 18,
+    opacity: 0.6,
   },
   loginButton: {
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.lg + 2,
     alignItems: 'center',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
     ...Shadows.medium,
   },
   loginButtonDisabled: {
@@ -228,22 +255,25 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     color: Colors.white,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
   demoHint: {
-    marginTop: Spacing.lg,
-    alignItems: 'center',
-    backgroundColor: Colors.infoBg,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  demoHintText: {
-    fontSize: FontSize.xs,
-    color: Colors.info,
-  },
-  footer: {
     textAlign: 'center',
     fontSize: FontSize.xs,
     color: Colors.textMuted,
-    marginTop: Spacing.xxxl,
+    marginTop: Spacing.xl,
+  },
+  registerLink: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  registerLinkText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  registerLinkBold: {
+    fontWeight: '700',
+    color: Colors.text,
   },
 });
+

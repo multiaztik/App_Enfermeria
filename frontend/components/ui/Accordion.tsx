@@ -1,8 +1,19 @@
 /**
- * Acordeón (Collapsible) con animación para navegación de patrones
+ * Acordeón (Collapsible) con animación — Diseño BitCare
+ * Soporta íconos PNG y emoji, con header negro cuando está abierto
  */
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  Image,
+} from 'react-native';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 
 // Habilitar LayoutAnimation en Android
@@ -13,6 +24,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 interface AccordionProps {
   title: string;
   icon?: string;
+  iconImage?: any;  // PNG require() image source
   color?: string;
   badge?: string;
   badgeColor?: string;
@@ -20,7 +32,16 @@ interface AccordionProps {
   defaultOpen?: boolean;
 }
 
-export function Accordion({ title, icon, color, badge, badgeColor, children, defaultOpen = false }: AccordionProps) {
+export function Accordion({
+  title,
+  icon,
+  iconImage,
+  color,
+  badge,
+  badgeColor,
+  children,
+  defaultOpen = false,
+}: AccordionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
 
@@ -48,25 +69,39 @@ export function Accordion({ title, icon, color, badge, badgeColor, children, def
   return (
     <View style={[styles.container, isOpen && styles.containerOpen]}>
       <TouchableOpacity
-        style={styles.header}
+        style={[styles.header, isOpen && styles.headerOpen]}
         onPress={toggle}
-        activeOpacity={0.7}
+        activeOpacity={0.8}
       >
         <View style={styles.titleRow}>
-          {icon && (
-            <View style={[styles.iconContainer, { backgroundColor: (color || Colors.primary) + '20' }]}>
-              <Text style={styles.icon}>{icon}</Text>
+          {/* Ícono PNG o emoji */}
+          {(iconImage || icon) && (
+            <View style={[styles.iconContainer, isOpen && styles.iconContainerOpen]}>
+              {iconImage ? (
+                <Image
+                  source={iconImage}
+                  style={[styles.iconImg, isOpen && styles.iconImgOpen]}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={styles.icon}>{icon}</Text>
+              )}
             </View>
           )}
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, isOpen && styles.titleOpen]}>{title}</Text>
           {badge && (
-            <View style={[styles.badge, { backgroundColor: (badgeColor || Colors.primary) + '20' }]}>
-              <Text style={[styles.badgeText, { color: badgeColor || Colors.primary }]}>{badge}</Text>
+            <View style={[styles.badge, { backgroundColor: (badgeColor || Colors.success) + '25' }]}>
+              <Text style={[styles.badgeText, { color: badgeColor || Colors.success }]}>
+                {badge}
+              </Text>
             </View>
           )}
         </View>
-        <Animated.Text style={[styles.chevron, rotateStyle]}>▼</Animated.Text>
+        <Animated.Text style={[styles.chevron, isOpen && styles.chevronOpen, rotateStyle]}>
+          ∨
+        </Animated.Text>
       </TouchableOpacity>
+
       {isOpen && <View style={styles.content}>{children}</View>}
     </View>
   );
@@ -83,13 +118,18 @@ const styles = StyleSheet.create({
     ...Shadows.small,
   },
   containerOpen: {
-    borderColor: Colors.primaryDark,
+    borderColor: Colors.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 4,
+    backgroundColor: Colors.surface,
+  },
+  headerOpen: {
+    backgroundColor: Colors.primary,
   },
   titleRow: {
     flexDirection: 'row',
@@ -103,6 +143,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
+    backgroundColor: Colors.card,
+  },
+  iconContainerOpen: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  iconImg: {
+    width: 22,
+    height: 22,
+    tintColor: Colors.text,
+  },
+  iconImgOpen: {
+    tintColor: Colors.white,
   },
   icon: {
     fontSize: 18,
@@ -110,8 +162,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.md,
     color: Colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
+  },
+  titleOpen: {
+    color: Colors.white,
   },
   badge: {
     paddingHorizontal: Spacing.sm,
@@ -124,12 +179,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   chevron: {
-    fontSize: FontSize.xs,
+    fontSize: FontSize.md,
     color: Colors.textSecondary,
     marginLeft: Spacing.sm,
+    fontWeight: '700',
+  },
+  chevronOpen: {
+    color: Colors.white,
   },
   content: {
     padding: Spacing.lg,
-    paddingTop: 0,
+    paddingTop: Spacing.sm,
+    backgroundColor: Colors.surface,
   },
 });
