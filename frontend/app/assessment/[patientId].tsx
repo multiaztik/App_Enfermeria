@@ -84,8 +84,7 @@ export default function AssessmentScreen() {
   const shouldShowField = (patternId: string, field: PatternField): boolean => {
     if (!field.showWhen) return true;
     const parentValue = getFieldValue(patternId, field.showWhen.fieldId);
-    // undefined se trata como false para toggles (estado inicial = problema presente)
-    const resolvedValue = parentValue === undefined ? false : parentValue;
+    const resolvedValue = parentValue === undefined ? false : Boolean(parentValue);
     return resolvedValue === field.showWhen.value;
   };
 

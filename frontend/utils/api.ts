@@ -6,7 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Cambia esto si el backend corre en otro host o puerto
-export const API_BASE = 'http://localhost:8000/api';
+export const API_BASE = 'http://192.168.100.49:8000/api'; //Cambiar linea a "export const API_BASE = 'http://192.168.100.49:8000/api';" Si se quiere usar el emulador si no usar "export const API_BASE = 'http://localhost:8000/api';"
 
 interface FetchOptions {
   method?: string;
@@ -30,24 +30,31 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
+  console.log(`[API] ${method} ${API_BASE}${endpoint}`);
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  console.log(`[API] Response status: ${response.status}`);
+
   if (!response.ok) {
     let detail = `Error ${response.status}`;
     try {
       const err = await response.json();
       detail = err.detail || detail;
+      console.log(`[API] Error response:`, err);
     } catch {
       // no-op
     }
     throw new Error(detail);
   }
 
-  return response.json() as Promise<T>;
+  const data = await response.json();
+  console.log(`[API] Success for ${endpoint}`);
+  return data as Promise<T>;
 }
 
 /* ── Auth ────────────────────────────────────────────────────────────── */

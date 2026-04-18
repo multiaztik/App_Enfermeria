@@ -124,11 +124,10 @@ export default function NewPatientScreen() {
         },
       });
 
-      // Recargar lista de pacientes
       await loadPatients();
 
       Alert.alert(
-        '¡Paciente registrado!',
+        'Éxito',
         `${form.nombre.trim()} fue añadido correctamente.`,
         [{ text: 'OK', onPress: () => router.back() }]
       );

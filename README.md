@@ -39,19 +39,45 @@
 - Node.js 18+
 - MongoDB corriendo localmente en `mongodb://localhost:27017`
 
-### Backend
+### ⚡ Ejecución Rápida (En Windows)
+
+```powershell
+# Terminal 1 - Backend
+cd backend
+c:/Users/PC/Documents/GitHub/App_Enfermeria/.venv/Scripts/python.exe -m uvicorn app.main:app --port 8000
+
+# Terminal 2 - Frontend
+cd frontend
+npx expo start --web --port 8082
+```
+### ⚡ Ejecución frontend para expo go
+cd frontend
+npx expo start -c
+```
+
+### ⚡ Ejecución backend para expo go
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+✅ **La aplicación estará lista en:**
+- **Web:** [http://localhost:8082](http://localhost:8082)
+- **API:** [http://localhost:8000](http://localhost:8000)
+- **Docs API:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### Backend (Detallado)
 
 ```bash
 cd backend
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --port 8000
 ```
 
 La API estará disponible en:
 - `http://localhost:8000` — API
-- `http://localhost:8000/docs` — Swagger UI
+- `http://localhost:8000/docs` — Swagger UI (Documentación interactiva)
 
-### Frontend
+### Frontend (Detallado)
 
 ```bash
 cd frontend
@@ -59,8 +85,22 @@ npm install
 npx expo start --web --port 8082
 ```
 
-Accede desde el navegador en `http://localhost:8082`
-o desde tu celular en `http://<IP-de-tu-PC>:8082`
+#### Opciones de Acceso:
+- **Navegador web:** `http://localhost:8082`
+- **Móvil en LAN:** `http://<IP-de-tu-PC>:8082`
+- **Expo Go (iOS/Android):**
+  1. Descarga "Expo Go" desde App Store o Google Play
+  2. Escanea el código QR de la terminal del frontend
+  3. ¡Listo! Se abrirá en tu móvil
+
+#### Controles en la Terminal:
+```
+› Press w │ Abrir en navegador web
+› Press a │ Abrir en Android Emulator  
+› Press i │ Abrir en iOS Simulator
+› Press r │ Recargar la app
+› Press ? │ Ver todos los comandos
+```
 
 ---
 

@@ -33,7 +33,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (bmi > 0 && bmi < 18.5) {
     diagnoses.push({
       code: '00002',
-      name: 'Imbalanced Nutrition: Less Than Body Requirements',
+      name: 'Desequilibrio Nutricional: Inferior a las Necesidades',
       nameEs: 'Desequilibrio Nutricional: Inferior a las Necesidades',
       priority: 'high',
       evidence: [`IMC: ${bmi.toFixed(1)} (< 18.5)`, 'Bajo peso detectado'],
@@ -45,7 +45,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (bmi >= 30) {
     diagnoses.push({
       code: '00001',
-      name: 'Imbalanced Nutrition: More Than Body Requirements',
+      name: 'Desequilibrio Nutricional: Superior a las Necesidades',
       nameEs: 'Desequilibrio Nutricional: Superior a las Necesidades',
       priority: bmi >= 35 ? 'high' : 'medium',
       evidence: [`IMC: ${bmi.toFixed(1)} (≥ 30)`, 'Obesidad detectada'],
@@ -57,7 +57,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (bmi >= 25 && bmi < 30) {
     diagnoses.push({
       code: '00233',
-      name: 'Overweight',
+      name: 'Sobrepeso',
       nameEs: 'Sobrepeso',
       priority: 'low',
       evidence: [`IMC: ${bmi.toFixed(1)} (25-29.9)`, 'Sobrepeso detectado'],
@@ -70,7 +70,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
     const swallowType = data.swallowing_type as string;
     diagnoses.push({
       code: '00103',
-      name: 'Impaired Swallowing',
+      name: 'Deterioro de la Deglución',
       nameEs: 'Deterioro de la Deglución',
       priority: 'high',
       evidence: [
@@ -86,7 +86,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
     const lesionTypes = (data.lesion_type as string[]) || [];
     diagnoses.push({
       code: '00046',
-      name: 'Impaired Skin Integrity',
+      name: 'Deterioro de la Integridad Cutánea',
       nameEs: 'Deterioro de la Integridad Cutánea',
       priority: lesionTypes.includes('pressure_ulcer') ? 'high' : 'medium',
       evidence: [
@@ -101,7 +101,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (data.oral_condition && data.oral_condition !== 'normal') {
     diagnoses.push({
       code: '00045',
-      name: 'Impaired Oral Mucous Membrane Integrity',
+      name: 'Deterioro de la Integridad de la Mucosa Oral',
       nameEs: 'Deterioro de la Integridad de la Mucosa Oral',
       priority: 'medium',
       evidence: [`Mucosa oral: ${data.oral_condition}`],
@@ -113,7 +113,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (data.edema_present === true) {
     diagnoses.push({
       code: '00026',
-      name: 'Excess Fluid Volume',
+      name: 'Exceso de Volumen de Líquidos',
       nameEs: 'Exceso de Volumen de Líquidos',
       priority: 'medium',
       evidence: ['Edema presente'],
@@ -125,7 +125,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (data.skin_turgor === 'decreased') {
     diagnoses.push({
       code: '00028',
-      name: 'Risk for Deficit Fluid Volume',
+      name: 'Riesgo de Déficit de Volumen de Líquidos',
       nameEs: 'Riesgo de Déficit de Volumen de Líquidos',
       priority: 'medium',
       evidence: ['Turgencia de piel disminuida'],
@@ -138,7 +138,7 @@ function evaluateNutritional(data: AssessmentData): NandaDiagnosis[] {
   if (glucose && glucose > 126) {
     diagnoses.push({
       code: '00179',
-      name: 'Risk for Unstable Blood Glucose Level',
+      name: 'Riesgo de Nivel de Glucemia Inestable',
       nameEs: 'Riesgo de Nivel de Glucemia Inestable',
       priority: glucose > 200 ? 'high' : 'medium',
       evidence: [`Glucosa: ${glucose} mg/dL (> 126)`],
@@ -167,7 +167,7 @@ function evaluateSleep(data: AssessmentData): NandaDiagnosis[] {
   if (insomnia && insomnia !== 'none') {
     diagnoses.push({
       code: '00095',
-      name: 'Insomnia',
+      name: 'Insomnio',
       nameEs: 'Insomnio',
       priority: 'high',
       evidence: [
@@ -182,7 +182,7 @@ function evaluateSleep(data: AssessmentData): NandaDiagnosis[] {
   if (hours && hours < 6 && quality === 'poor') {
     diagnoses.push({
       code: '00096',
-      name: 'Sleep Deprivation',
+      name: 'Deprivación de Sueño',
       nameEs: 'Deprivación de Sueño',
       priority: 'high',
       evidence: [
@@ -198,7 +198,7 @@ function evaluateSleep(data: AssessmentData): NandaDiagnosis[] {
   if (data.sleep_normal === false && !diagnoses.length) {
     diagnoses.push({
       code: '00198',
-      name: 'Disturbed Sleep Pattern',
+      name: 'Trastorno del Patrón de Sueño',
       nameEs: 'Trastorno del Patrón de Sueño',
       priority: 'medium',
       evidence: [
@@ -214,7 +214,7 @@ function evaluateSleep(data: AssessmentData): NandaDiagnosis[] {
   if (fatigue && fatigue >= 7) {
     diagnoses.push({
       code: '00093',
-      name: 'Fatigue',
+      name: 'Fatiga',
       nameEs: 'Fatiga',
       priority: fatigue >= 9 ? 'high' : 'medium',
       evidence: [`Nivel de fatiga: ${fatigue}/10`],
@@ -237,7 +237,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
       (coping === 'inadequate' || coping === 'absent')) {
     diagnoses.push({
       code: '00069',
-      name: 'Ineffective Coping',
+      name: 'Afrontamiento Ineficaz',
       nameEs: 'Afrontamiento Ineficaz',
       priority: 'high',
       evidence: [
@@ -253,7 +253,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
     const symptoms = (data.anxiety_symptoms as string[]) || [];
     diagnoses.push({
       code: '00146',
-      name: 'Anxiety',
+      name: 'Ansiedad',
       nameEs: 'Ansiedad',
       priority: symptoms.length >= 3 ? 'high' : 'medium',
       evidence: [
@@ -268,7 +268,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
   if (data.support_system === false) {
     diagnoses.push({
       code: '00053',
-      name: 'Social Isolation',
+      name: 'Aislamiento Social',
       nameEs: 'Aislamiento Social',
       priority: 'medium',
       evidence: ['Sin sistema de apoyo identificado'],
@@ -280,7 +280,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
   if (stressLevel === 'severe') {
     diagnoses.push({
       code: '00177',
-      name: 'Stress Overload',
+      name: 'Sobrecarga de Estrés',
       nameEs: 'Sobrecarga de Estrés',
       priority: 'high',
       evidence: ['Nivel de estrés: Severo'],
@@ -293,7 +293,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
   if (emotional === 'sad') {
     diagnoses.push({
       code: '00124',
-      name: 'Hopelessness',
+      name: 'Desesperanza',
       nameEs: 'Desesperanza',
       priority: 'medium',
       evidence: ['Estado emocional: Triste/Deprimido'],
@@ -304,7 +304,7 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
   if (emotional === 'fearful') {
     diagnoses.push({
       code: '00148',
-      name: 'Fear',
+      name: 'Temor',
       nameEs: 'Temor',
       priority: 'medium',
       evidence: ['Estado emocional: Temeroso'],

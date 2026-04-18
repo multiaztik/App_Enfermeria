@@ -80,7 +80,7 @@ export default function EditPatientScreen() {
         },
       });
       await loadPatients();
-      Alert.alert('¡Guardado!', 'Paciente actualizado correctamente.', [
+      Alert.alert('Éxito', 'Paciente actualizado correctamente.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: unknown) {
