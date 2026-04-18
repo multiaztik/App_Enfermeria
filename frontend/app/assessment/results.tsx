@@ -1,6 +1,6 @@
 /**
- * Pantalla de Resultados de Valoración
- * Muestra el resumen con diagnósticos NANDA detectados
+ * Pantalla de Resultados de Valoración — Diseño BitCare
+ * Header con ícono de éxito, stats, diagnósticos NANDA y botones de acción
  */
 import React, { useRef, useEffect } from 'react';
 import {
@@ -10,11 +10,27 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { NandaBanner } from '../../components/NandaBanner';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
+
+const PATTERN_INFO: Record<string, { name: string; icon: any }> = {
+  nutritional: {
+    name: 'Nutricional-Metabólico',
+    icon: require('../../assets/icons/estomago.png'),
+  },
+  sleep: {
+    name: 'Sueño-Descanso',
+    icon: require('../../assets/icons/cerebro.png'),
+  },
+  stress: {
+    name: 'Tolerancia al Estrés',
+    icon: require('../../assets/icons/cardiograma.png'),
+  },
+};
 
 export default function ResultsScreen() {
   const { currentPatient, currentAssessment, suggestions } = useAssessment();
@@ -35,14 +51,16 @@ export default function ResultsScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View
+        style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
+      >
         {/* Success Header */}
         <View style={styles.successHeader}>
-          <Text style={styles.successIcon}>✅</Text>
+          <View style={styles.successIconWrap}>
+            <Text style={styles.successCheckmark}>✓</Text>
+          </View>
           <Text style={styles.successTitle}>Valoración Completada</Text>
-          <Text style={styles.successSubtitle}>
-            {currentPatient?.nombre}
-          </Text>
+          <Text style={styles.successSubtitle}>{currentPatient?.nombre}</Text>
           <Text style={styles.successDate}>
             {new Date().toLocaleDateString('es-MX', {
               weekday: 'long',
@@ -57,20 +75,30 @@ export default function ResultsScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{completedPatterns.length}</Text>
-            <Text style={styles.statLabel}>Patrones{'\n'}evaluados</Text>
+          <View style={[styles.statCard, styles.statCardDark]}>
+            <Text style={[styles.statNumber, styles.statNumberLight]}>
+              {completedPatterns.length}
+            </Text>
+            <Text style={[styles.statLabel, styles.statLabelLight]}>
+              Patrones{'\n'}evaluados
+            </Text>
           </View>
-          <View style={[styles.statCard, styles.statDanger]}>
-            <Text style={[styles.statNumber, { color: Colors.danger }]}>{highPriority.length}</Text>
+          <View style={styles.statCard}>
+            <Text style={[styles.statNumber, { color: Colors.danger }]}>
+              {highPriority.length}
+            </Text>
             <Text style={styles.statLabel}>Prioridad{'\n'}alta</Text>
           </View>
-          <View style={[styles.statCard, styles.statWarning]}>
-            <Text style={[styles.statNumber, { color: Colors.warning }]}>{mediumPriority.length}</Text>
+          <View style={styles.statCard}>
+            <Text style={[styles.statNumber, { color: Colors.warning }]}>
+              {mediumPriority.length}
+            </Text>
             <Text style={styles.statLabel}>Prioridad{'\n'}media</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: Colors.info }]}>{lowPriority.length}</Text>
+            <Text style={[styles.statNumber, { color: Colors.info }]}>
+              {lowPriority.length}
+            </Text>
             <Text style={styles.statLabel}>Prioridad{'\n'}baja</Text>
           </View>
         </View>
@@ -78,20 +106,19 @@ export default function ResultsScreen() {
         {/* Diagnósticos detectados */}
         {suggestions.length > 0 ? (
           <View style={styles.diagnosisSection}>
-            <Text style={styles.sectionTitle}>
-              🩺 Diagnósticos NANDA-I Sugeridos
-            </Text>
+            <Text style={styles.sectionTitle}>Diagnósticos NANDA-I Sugeridos</Text>
             <Text style={styles.sectionSubtitle}>
               Basados en los hallazgos clínicos detectados durante la valoración
             </Text>
-
             {suggestions.map((s, i) => (
               <NandaBanner key={`${s.code}-${i}`} diagnosis={s} index={i} />
             ))}
           </View>
         ) : (
           <View style={styles.noDiagnosisCard}>
-            <Text style={styles.noDiagnosisIcon}>✨</Text>
+            <View style={styles.noDiagnosisIconWrap}>
+              <Text style={styles.noDiagnosisCheck}>✓</Text>
+            </View>
             <Text style={styles.noDiagnosisText}>
               No se detectaron diagnósticos NANDA
             </Text>
@@ -102,48 +129,65 @@ export default function ResultsScreen() {
         )}
 
         {/* Patrones evaluados */}
-        <Text style={styles.sectionTitle}>📋 Patrones Evaluados</Text>
-        {completedPatterns.map((p) => (
-          <View key={p} style={styles.patternSummaryCard}>
-            <View style={styles.patternSummaryHeader}>
-              <Text style={styles.patternSummaryIcon}>
-                {p === 'nutritional' ? '🍎' : p === 'sleep' ? '🌙' : '🧠'}
-              </Text>
-              <Text style={styles.patternSummaryName}>
-                {p === 'nutritional'
-                  ? 'Nutricional-Metabólico'
-                  : p === 'sleep'
-                  ? 'Sueño-Descanso'
-                  : 'Tolerancia al Estrés'}
-              </Text>
-              <View style={styles.completedBadge}>
-                <Text style={styles.completedBadgeText}>✓</Text>
+        <Text style={styles.sectionTitle}>Patrones Evaluados</Text>
+        {completedPatterns.map((p) => {
+          const info = PATTERN_INFO[p];
+          return (
+            <View key={p} style={styles.patternSummaryCard}>
+              <View style={styles.patternSummaryHeader}>
+                <View style={styles.patternIconWrap}>
+                  {info?.icon ? (
+                    <Image
+                      source={info.icon}
+                      style={styles.patternImg}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={styles.patternEmoji}>📋</Text>
+                  )}
+                </View>
+                <View style={styles.patternTextWrap}>
+                  <Text style={styles.patternSummaryName}>
+                    {info?.name || p}
+                  </Text>
+                  <Text style={styles.fieldCount}>
+                    {Object.keys(currentAssessment?.patterns[p] || {}).length} campos registrados
+                  </Text>
+                </View>
+                <View style={styles.completedBadge}>
+                  <Text style={styles.completedBadgeText}>✓</Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.fieldCount}>
-              {Object.keys(currentAssessment?.patterns[p] || {}).length} campos registrados
-            </Text>
-          </View>
-        ))}
+          );
+        })}
 
         {/* Acciones */}
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.primaryAction}
             onPress={() => router.replace('/(tabs)/home')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.primaryActionText}>🏠 Ir al Inicio</Text>
+            <Image
+              source={require('../../assets/icons/hospital.png')}
+              style={styles.actionIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.primaryActionText}>Ir al Inicio</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryAction}
             onPress={() => router.replace('/(tabs)/patients')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.secondaryActionText}>
-              👥 Nueva Valoración
-            </Text>
+            <Image
+              source={require('../../assets/icons/enfermera.png')}
+              style={[styles.actionIcon, styles.actionIconDark]}
+              resizeMode="contain"
+            />
+            <Text style={styles.secondaryActionText}>Nueva Valoración</Text>
           </TouchableOpacity>
         </View>
 
@@ -161,36 +205,49 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.xl,
   },
+  // Success
   successHeader: {
     alignItems: 'center',
     paddingVertical: Spacing.xxl,
-    backgroundColor: Colors.successBg,
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xxl,
     marginBottom: Spacing.xxl,
     borderWidth: 1,
-    borderColor: Colors.successDark + '30',
+    borderColor: Colors.border,
+    ...Shadows.small,
   },
-  successIcon: {
-    fontSize: 56,
-    marginBottom: Spacing.md,
+  successIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+  },
+  successCheckmark: {
+    fontSize: 32,
+    color: Colors.white,
+    fontWeight: '800',
   },
   successTitle: {
     fontSize: FontSize.xxl,
-    color: Colors.success,
+    color: Colors.text,
     fontWeight: '800',
   },
   successSubtitle: {
     fontSize: FontSize.md,
-    color: Colors.text,
+    color: Colors.textSecondary,
     fontWeight: '600',
     marginTop: Spacing.sm,
   },
   successDate: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    color: Colors.textMuted,
     marginTop: Spacing.xs,
     textTransform: 'capitalize',
   },
+  // Stats
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -205,18 +262,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  statDanger: {
-    backgroundColor: Colors.dangerBg,
-    borderColor: Colors.dangerDark + '20',
-  },
-  statWarning: {
-    backgroundColor: Colors.warningBg,
-    borderColor: Colors.warningDark + '20',
+  statCardDark: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   statNumber: {
     fontSize: FontSize.xxl,
     fontWeight: '800',
-    color: Colors.primary,
+    color: Colors.text,
+  },
+  statNumberLight: {
+    color: Colors.white,
   },
   statLabel: {
     fontSize: FontSize.xs,
@@ -225,6 +281,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 14,
   },
+  statLabelLight: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  // Diagnosis
   diagnosisSection: {
     marginBottom: Spacing.xxl,
   },
@@ -247,10 +307,21 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl,
     borderWidth: 1,
     borderColor: Colors.border,
+    ...Shadows.small,
   },
-  noDiagnosisIcon: {
-    fontSize: 40,
+  noDiagnosisIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.success + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: Spacing.md,
+  },
+  noDiagnosisCheck: {
+    fontSize: 28,
+    color: Colors.success,
+    fontWeight: '800',
   },
   noDiagnosisText: {
     fontSize: FontSize.md,
@@ -263,6 +334,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     textAlign: 'center',
   },
+  // Patterns
   patternSummaryCard: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
@@ -270,25 +342,46 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
+    ...Shadows.small,
   },
   patternSummaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  patternSummaryIcon: {
-    fontSize: 20,
+  patternIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: Spacing.md,
+  },
+  patternImg: {
+    width: 24,
+    height: 24,
+    tintColor: Colors.text,
+  },
+  patternEmoji: {
+    fontSize: 20,
+  },
+  patternTextWrap: {
+    flex: 1,
   },
   patternSummaryName: {
     fontSize: FontSize.md,
     color: Colors.text,
     fontWeight: '600',
-    flex: 1,
+  },
+  fieldCount: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   completedBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
@@ -298,22 +391,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: FontSize.sm,
   },
-  fieldCount: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-    marginLeft: 36,
-  },
+  // Actions
   actionsContainer: {
     marginTop: Spacing.xxl,
     gap: Spacing.md,
   },
   primaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
+    paddingVertical: Spacing.lg + 2,
+    gap: Spacing.sm,
     ...Shadows.medium,
+  },
+  actionIcon: {
+    width: 20,
+    height: 20,
+    tintColor: Colors.white,
+  },
+  actionIconDark: {
+    tintColor: Colors.text,
   },
   primaryActionText: {
     fontSize: FontSize.lg,
@@ -321,12 +420,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   secondaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.xl,
-    paddingVertical: Spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
+    paddingVertical: Spacing.lg + 2,
+    borderWidth: 1.5,
     borderColor: Colors.border,
+    gap: Spacing.sm,
   },
   secondaryActionText: {
     fontSize: FontSize.md,

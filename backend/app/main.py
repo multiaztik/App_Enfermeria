@@ -1,11 +1,23 @@
 """
 NurseAssess API - Entry Point
 FastAPI application for clinical nursing assessment
+Conectado a MongoDB con Motor (AsyncIO)
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routes import auth, patients, assessments
+from app.database import connect_db, close_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ciclo de vida: conectar MongoDB al inicio, cerrar al terminar"""
+    await connect_db()
+    yield
+    await close_db()
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -13,6 +25,7 @@ app = FastAPI(
     description="API para la aplicación de valoración clínica de enfermería basada en los Patrones Funcionales de Gordon",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS Middleware
@@ -42,4 +55,4 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "healthy", "database": "mongodb"}

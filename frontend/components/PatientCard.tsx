@@ -1,8 +1,10 @@
 /**
- * Tarjeta de paciente con información resumida
+ * Tarjeta de paciente — Diseño BitCare
+ * Avatar con iniciales, info limpia, ícono PNG médico
+ * Sin referencia a QR Code
  */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../constants/colors';
 import type { Patient } from '../contexts/AssessmentContext';
 
@@ -34,27 +36,31 @@ export function PatientCard({ patient, onPress }: PatientCardProps) {
           <View style={styles.divider} />
           <View style={styles.detail}>
             <Text style={styles.detailLabel}>Sexo</Text>
-            <Text style={styles.detailValue}>{patient.sexo === 'M' ? 'Masculino' : 'Femenino'}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.detail}>
-            <Text style={styles.detailLabel}>QR</Text>
-            <Text style={styles.detailValue}>{patient.qr_code}</Text>
+            <Text style={styles.detailValue}>
+              {patient.sexo === 'M' ? 'Masculino' : 'Femenino'}
+            </Text>
           </View>
         </View>
-        <Text style={styles.diagnosis} numberOfLines={1}>
-          📋 {patient.diagnostico_medico}
-        </Text>
+        <View style={styles.diagRow}>
+          <Image
+            source={require('../assets/icons/cardiograma.png')}
+            style={styles.diagIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.diagnosis} numberOfLines={1}>
+            {patient.diagnostico_medico}
+          </Text>
+        </View>
         {patient.alergias.length > 0 && (
           <View style={styles.allergiesRow}>
-            <Text style={styles.allergyIcon}>⚠️</Text>
-            <Text style={styles.allergies}>
-              {patient.alergias.join(', ')}
-            </Text>
+            <Text style={styles.allergyIcon}>⚠</Text>
+            <Text style={styles.allergies}>{patient.alergias.join(', ')}</Text>
           </View>
         )}
       </View>
-      <Text style={styles.arrow}>›</Text>
+      <View style={styles.arrowWrap}>
+        <Text style={styles.arrow}>›</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -72,17 +78,19 @@ const styles = StyleSheet.create({
     ...Shadows.small,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: Colors.primaryDark + '40',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
   },
   initials: {
     fontSize: FontSize.lg,
-    color: Colors.primary,
+    color: Colors.text,
     fontWeight: '700',
   },
   info: {
@@ -119,28 +127,51 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginHorizontal: Spacing.sm,
   },
+  diagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  diagIcon: {
+    width: 14,
+    height: 14,
+    tintColor: Colors.textSecondary,
+  },
   diagnosis: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    marginBottom: 2,
+    flex: 1,
   },
   allergiesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+    gap: 4,
   },
   allergyIcon: {
     fontSize: 12,
-    marginRight: 4,
+    color: Colors.warning,
   },
   allergies: {
     fontSize: FontSize.xs,
     color: Colors.warning,
     fontWeight: '500',
+    flex: 1,
+  },
+  arrowWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: Spacing.sm,
   },
   arrow: {
-    fontSize: 24,
-    color: Colors.textMuted,
-    marginLeft: Spacing.sm,
+    fontSize: 18,
+    color: Colors.white,
+    fontWeight: '700',
+    marginTop: -2,
   },
 });

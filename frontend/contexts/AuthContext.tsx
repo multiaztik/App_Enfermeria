@@ -1,9 +1,11 @@
 /**
- * Contexto de Autenticación
- * Maneja el estado global del usuario (enfermero) autenticado
+ * Contexto de Autenticación — BitCare
+ * Conectado al backend FastAPI + MongoDB
+ * Login / Register / Logout reales con JWT
  */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authApi } from '../utils/api';
 
 interface User {
   id: string;
@@ -47,10 +49,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         isLoading: false,
       };
     case 'LOGOUT':
-      return {
-        ...initialState,
-        isLoading: false,
-      };
+      return { ...initialState, isLoading: false };
     default:
       return state;
   }
@@ -59,7 +58,12 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: { email: string; password: string; nombre: string; cedula: string }) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    nombre: string;
+    cedula: string;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,57 +92,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreSession();
   }, []);
 
-  const login = async (email: string, _password: string) => {
+  /**
+   * Login real con FastAPI + MongoDB
+   * Guarda el token JWT y los datos del usuario en AsyncStorage
+   */
+  const login = async (email: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // TODO: Conectar con FastAPI cuando el backend esté listo
-      // Por ahora, simulamos login para desarrollo
-      const mockUser: User = {
-        id: '1',
-        email,
-        nombre: 'Enfermero Demo',
-        role: 'nurse',
-        cedula: '12345678',
+      const response = await authApi.login(email, password);
+
+      const user: User = {
+        id: response.user.id,
+        email: response.user.email,
+        nombre: response.user.nombre,
+        role: response.user.role,
+        cedula: response.user.cedula,
       };
-      const mockToken = 'mock-jwt-token-' + Date.now();
 
-      await AsyncStorage.setItem('auth_token', mockToken);
-      await AsyncStorage.setItem('user_data', JSON.stringify(mockUser));
+      await AsyncStorage.setItem('auth_token', response.access_token);
+      await AsyncStorage.setItem('user_data', JSON.stringify(user));
 
-      dispatch({ type: 'LOGIN', payload: { user: mockUser, token: mockToken } });
+      dispatch({ type: 'LOGIN', payload: { user, token: response.access_token } });
+    } catch (error) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error; // re-lanzar para que el UI pueda mostrar el error
+    }
+  };
+
+  /**
+   * Registro real — crea usuario en MongoDB y hace login automático
+   */
+  const register = async (data: {
+    email: string;
+    password: string;
+    nombre: string;
+    cedula: string;
+  }) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await authApi.register(data);
+
+      const user: User = {
+        id: response.user.id,
+        email: response.user.email,
+        nombre: response.user.nombre,
+        role: response.user.role,
+        cedula: response.user.cedula,
+      };
+
+      await AsyncStorage.setItem('auth_token', response.access_token);
+      await AsyncStorage.setItem('user_data', JSON.stringify(user));
+
+      dispatch({ type: 'LOGIN', payload: { user, token: response.access_token } });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
     }
   };
 
+  /**
+   * Logout — limpia storage y estado global
+   */
   const logout = async () => {
-    await AsyncStorage.removeItem('auth_token');
-    await AsyncStorage.removeItem('user_data');
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  const register = async (data: { email: string; password: string; nombre: string; cedula: string }) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // TODO: Conectar con FastAPI
-      const mockUser: User = {
-        id: '2',
-        email: data.email,
-        nombre: data.nombre,
-        role: 'nurse',
-        cedula: data.cedula,
-      };
-      const mockToken = 'mock-jwt-token-' + Date.now();
-
-      await AsyncStorage.setItem('auth_token', mockToken);
-      await AsyncStorage.setItem('user_data', JSON.stringify(mockUser));
-
-      dispatch({ type: 'LOGIN', payload: { user: mockUser, token: mockToken } });
-    } catch (error) {
-      dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
+      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('user_data');
+    } catch {
+      // ignorar errores de storage en web
     }
+    dispatch({ type: 'LOGOUT' });
   };
 
   return (

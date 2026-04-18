@@ -1,9 +1,9 @@
 /**
- * Banner de sugerencia de diagnóstico NANDA
- * Se muestra en tiempo real cuando el motor detecta un diagnóstico
+ * Banner de sugerencia de diagnóstico NANDA — Diseño BitCare
+ * Tarjeta blanca con borde izquierdo de color según prioridad
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, Image } from 'react-native';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../constants/colors';
 import type { NandaDiagnosis } from '../utils/nandaRules';
 
@@ -15,26 +15,23 @@ interface NandaBannerProps {
 const PRIORITY_CONFIG = {
   high: {
     color: Colors.danger,
-    bg: Colors.dangerBg,
     label: 'ALTA',
-    icon: '🔴',
+    dot: '●',
   },
   medium: {
     color: Colors.warning,
-    bg: Colors.warningBg,
     label: 'MEDIA',
-    icon: '🟡',
+    dot: '●',
   },
   low: {
     color: Colors.info,
-    bg: Colors.infoBg,
     label: 'BAJA',
-    icon: '🔵',
+    dot: '●',
   },
 };
 
 export function NandaBanner({ diagnosis, index = 0 }: NandaBannerProps) {
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const config = PRIORITY_CONFIG[diagnosis.priority];
 
@@ -61,26 +58,28 @@ export function NandaBanner({ diagnosis, index = 0 }: NandaBannerProps) {
         styles.container,
         {
           borderLeftColor: config.color,
-          backgroundColor: config.bg,
           transform: [{ translateY: slideAnim }],
           opacity: opacityAnim,
         },
       ]}
     >
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.icon}>{config.icon}</Text>
-          <Text style={[styles.code, { color: config.color }]}>
-            NANDA {diagnosis.code}
-          </Text>
-          <View style={[styles.priorityBadge, { backgroundColor: config.color + '30' }]}>
+          <Text style={[styles.dot, { color: config.color }]}>{config.dot}</Text>
+          <Text style={styles.code}>NANDA {diagnosis.code}</Text>
+          <View style={[styles.priorityBadge, { backgroundColor: config.color + '18' }]}>
             <Text style={[styles.priorityText, { color: config.color }]}>
               {config.label}
             </Text>
           </View>
         </View>
       </View>
+
+      {/* Diagnóstico */}
       <Text style={styles.diagnosis}>{diagnosis.nameEs}</Text>
+
+      {/* Evidencia */}
       <View style={styles.evidenceContainer}>
         <Text style={styles.evidenceTitle}>Evidencia:</Text>
         {diagnosis.evidence.map((e, i) => (
@@ -96,8 +95,11 @@ export function NandaBanner({ diagnosis, index = 0 }: NandaBannerProps) {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     ...Shadows.small,
@@ -109,19 +111,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  icon: {
-    fontSize: 14,
-    marginRight: Spacing.sm,
+  dot: {
+    fontSize: 10,
+    marginRight: Spacing.xs,
   },
   code: {
     fontSize: FontSize.sm,
     fontWeight: '700',
+    color: Colors.text,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     marginRight: Spacing.sm,
   },
   priorityBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 1,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 2,
     borderRadius: BorderRadius.full,
   },
   priorityText: {
@@ -136,13 +139,17 @@ const styles = StyleSheet.create({
   },
   evidenceContainer: {
     marginTop: Spacing.xs,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
   },
   evidenceTitle: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 4,
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   evidenceRow: {
     flexDirection: 'row',

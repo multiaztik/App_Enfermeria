@@ -1,6 +1,6 @@
 /**
- * Pantalla principal de Valoración Clínica
- * Flujo de evaluación por patrones con acordeón y lógica condicional
+ * Pantalla principal de Valoración Clínica — Diseño BitCare
+ * Header con datos del paciente + acordeones de patrones + diagnósticos NANDA
  */
 import React, { useState, useCallback } from 'react';
 import {
@@ -11,20 +11,29 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { Accordion } from '../../components/ui/Accordion';
 import { Toggle } from '../../components/ui/Toggle';
 import { Selector } from '../../components/ui/Selector';
-import { SliderInput } from '../../components/ui/SliderInput';
+import { StepperInput } from '../../components/ui/StepperInput';
 import { MultiSelect } from '../../components/ui/MultiSelect';
 import { NumberInput } from '../../components/ui/NumberInput';
+import { BodyMap } from '../../components/ui/BodyMap';
 import { NandaBanner } from '../../components/NandaBanner';
-import { PATTERNS } from '../../constants/patterns';
 import { getBMICategory } from '../../utils/nandaRules';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 import type { PatternField } from '../../constants/patterns';
+import { PATTERNS } from '../../constants/patterns';
+
+// Íconos PNG para los patrones en el acordeón
+const PATTERN_ICONS: Record<string, any> = {
+  nutritional: require('../../assets/icons/estomago.png'),
+  sleep: require('../../assets/icons/cerebro.png'),
+  stress: require('../../assets/icons/cardiograma.png'),
+};
 
 export default function AssessmentScreen() {
   const { patientId } = useLocalSearchParams<{ patientId: string }>();
@@ -36,8 +45,20 @@ export default function AssessmentScreen() {
     suggestions,
   } = useAssessment();
 
-  // Estado local para cada patrón
-  const [patternData, setPatternData] = useState<Record<string, Record<string, unknown>>>({});
+  // Inicializar valores por defecto de campos isSeedQuestion
+  const [patternData, setPatternData] = useState<Record<string, Record<string, unknown>>>(() => {
+    const defaults: Record<string, Record<string, unknown>> = {};
+    for (const pattern of PATTERNS) {
+      defaults[pattern.id] = {};
+      for (const field of pattern.fields) {
+        // Los toggles semilla arrancan en false (hay problema → mostrar detalles)
+        if (field.isSeedQuestion && field.type === 'toggle') {
+          defaults[pattern.id][field.id] = false;
+        }
+      }
+    }
+    return defaults;
+  });
 
   const getFieldValue = (patternId: string, fieldId: string): unknown => {
     return patternData[patternId]?.[fieldId];
@@ -53,7 +74,6 @@ export default function AssessmentScreen() {
             [fieldId]: value,
           },
         };
-        // Actualizar el contexto para recalcular NANDA
         updatePattern(patternId, updated[patternId]);
         return updated;
       });
@@ -64,7 +84,8 @@ export default function AssessmentScreen() {
   const shouldShowField = (patternId: string, field: PatternField): boolean => {
     if (!field.showWhen) return true;
     const parentValue = getFieldValue(patternId, field.showWhen.fieldId);
-    return parentValue === field.showWhen.value;
+    const resolvedValue = parentValue === undefined ? false : Boolean(parentValue);
+    return resolvedValue === field.showWhen.value;
   };
 
   const handleComplete = async () => {
@@ -96,14 +117,12 @@ export default function AssessmentScreen() {
     );
   }
 
-  // Calcular BMI si hay datos
   const weight = patternData.nutritional?.weight as number;
   const height = patternData.nutritional?.height as number;
   const bmiInfo = weight && height ? getBMICategory(weight, height) : null;
 
   const renderField = (patternId: string, field: PatternField) => {
     if (!shouldShowField(patternId, field)) return null;
-
     const value = getFieldValue(patternId, field.id);
 
     switch (field.type) {
@@ -129,7 +148,7 @@ export default function AssessmentScreen() {
         );
       case 'slider':
         return (
-          <SliderInput
+          <StepperInput
             key={field.id}
             label={field.label}
             value={(value as number) || field.min || 0}
@@ -161,12 +180,10 @@ export default function AssessmentScreen() {
                 setFieldValue(patternId, field.id, '');
                 return;
               }
-              // Store as number if valid, keep string for intermediate input like "1."
               const num = parseFloat(v);
               if (!isNaN(num) && !v.endsWith('.')) {
                 setFieldValue(patternId, field.id, num);
               } else {
-                // Store intermediate string but don't trigger NANDA evaluation
                 setPatternData((prev) => ({
                   ...prev,
                   [patternId]: {
@@ -196,42 +213,70 @@ export default function AssessmentScreen() {
         );
       case 'body_map':
         return (
-          <View key={field.id} style={styles.bodyMapPlaceholder}>
-            <Text style={styles.bodyMapIcon}>🫀</Text>
-            <Text style={styles.bodyMapText}>Mapa Corporal Interactivo</Text>
-            <Text style={styles.bodyMapSubtext}>
-              (Toca para localizar: {field.label})
-            </Text>
-          </View>
+          <BodyMap
+            key={field.id}
+            label={field.label}
+            selectedZones={(value as string[]) || []}
+            onZonesChange={(v) => setFieldValue(patternId, field.id, v)}
+          />
         );
       default:
         return null;
     }
   };
 
+  const initials = currentPatient.nombre
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('');
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header del paciente */}
-      <View style={styles.patientHeader}>
-        <View style={styles.patientAvatar}>
-          <Text style={styles.patientInitials}>
-            {currentPatient.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-          </Text>
+      {/* Header del paciente — estilo BitCare */}
+      <View style={styles.pageHeader}>
+        <View style={styles.pageHeaderLeft}>
+          <Text style={styles.greeting}>Hola Enfermer@</Text>
+          <Text style={styles.subHeading}>Cuestionarios 11 patrones</Text>
         </View>
-        <View style={styles.patientInfo}>
-          <Text style={styles.patientName}>{currentPatient.nombre}</Text>
-          <Text style={styles.patientDetails}>
-            {currentPatient.edad} años • {currentPatient.sexo === 'M' ? 'Masculino' : 'Femenino'} • {currentPatient.qr_code}
-          </Text>
-          <Text style={styles.patientDiagnosis}>📋 {currentPatient.diagnostico_medico}</Text>
+        <View style={styles.headerIcons}>
+          <Image
+            source={require('../../assets/icons/enfermera.png')}
+            style={styles.headerIcon}
+            resizeMode="contain"
+          />
+          <Image
+            source={require('../../assets/icons/doctor.png')}
+            style={[styles.headerIcon, { opacity: 0.5 }]}
+            resizeMode="contain"
+          />
         </View>
       </View>
 
-      {/* Alertas del paciente */}
+      {/* Tarjeta del paciente */}
+      <View style={styles.patientCard}>
+        <View style={styles.patientAvatar}>
+          <Text style={styles.patientInitials}>{initials}</Text>
+        </View>
+        <View style={styles.patientInfo}>
+          <View style={styles.patientNameRow}>
+            <Text style={styles.patientName}>{currentPatient.nombre}</Text>
+            <TouchableOpacity style={styles.editBtn} onPress={() => { }}>
+              <Text style={styles.editIcon}>✏</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.patientDetails}>
+            {currentPatient.edad} años · {currentPatient.sexo === 'M' ? 'Masculino' : 'Femenino'}
+          </Text>
+          <Text style={styles.patientDiagnosis}>{currentPatient.diagnostico_medico}</Text>
+        </View>
+      </View>
+
+      {/* Alertas de alergias */}
       {currentPatient.alergias.length > 0 && (
         <View style={styles.alertBanner}>
           <Text style={styles.alertIcon}>⚠️</Text>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.alertTitle}>Alergias Conocidas</Text>
             <Text style={styles.alertText}>{currentPatient.alergias.join(', ')}</Text>
           </View>
@@ -247,15 +292,12 @@ export default function AssessmentScreen() {
               {bmiInfo.bmi.toFixed(1)}
             </Text>
           </View>
-          <Text style={[styles.bmiCategory, { color: bmiInfo.color }]}>
-            {bmiInfo.category}
-          </Text>
-          {/* BMI Bar */}
+          <Text style={[styles.bmiCategory, { color: bmiInfo.color }]}>{bmiInfo.category}</Text>
           <View style={styles.bmiBar}>
-            <View style={[styles.bmiBarSection, { flex: 18.5, backgroundColor: Colors.warning + '60' }]} />
-            <View style={[styles.bmiBarSection, { flex: 6.5, backgroundColor: Colors.success + '60' }]} />
-            <View style={[styles.bmiBarSection, { flex: 5, backgroundColor: Colors.warning + '60' }]} />
-            <View style={[styles.bmiBarSection, { flex: 10, backgroundColor: Colors.danger + '60' }]} />
+            <View style={[styles.bmiBarSection, { flex: 18.5, backgroundColor: Colors.warning + '50' }]} />
+            <View style={[styles.bmiBarSection, { flex: 6.5, backgroundColor: Colors.success + '50' }]} />
+            <View style={[styles.bmiBarSection, { flex: 5, backgroundColor: Colors.warning + '50' }]} />
+            <View style={[styles.bmiBarSection, { flex: 10, backgroundColor: Colors.danger + '50' }]} />
           </View>
           <View style={styles.bmiLabels}>
             <Text style={styles.bmiLabelText}>Bajo</Text>
@@ -266,34 +308,36 @@ export default function AssessmentScreen() {
         </View>
       )}
 
-      {/* Patrones con Acordeón */}
-      <Text style={styles.sectionTitle}>Patrones de Valoración</Text>
+      {/* Acordeones de Patrones */}
+      <View style={styles.patternsContainer}>
+        {PATTERNS.filter((p) => p.isMvp).map((pattern, idx) => {
+          const filledFields = Object.keys(patternData[pattern.id] || {}).length;
+          const totalFields = pattern.fields.filter((f) => !f.showWhen).length;
+          const progress = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+          const iconSrc = PATTERN_ICONS[pattern.id];
 
-      {PATTERNS.filter((p) => p.isMvp).map((pattern, idx) => {
-        const filledFields = Object.keys(patternData[pattern.id] || {}).length;
-        const totalFields = pattern.fields.filter((f) => !f.showWhen).length;
-        const progress = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+          return (
+            <Accordion
+              key={pattern.id}
+              title={pattern.name}
+              icon={pattern.icon}
+              iconImage={iconSrc}
+              color={Colors.primary}
+              badge={progress > 0 ? `${Math.min(progress, 100)}%` : undefined}
+              badgeColor={progress >= 80 ? Colors.success : Colors.primaryLight}
+              defaultOpen={idx === 0}
+            >
+              {pattern.fields.map((field) => renderField(pattern.id, field))}
+            </Accordion>
+          );
+        })}
+      </View>
 
-        return (
-          <Accordion
-            key={pattern.id}
-            title={pattern.name}
-            icon={pattern.icon}
-            color={pattern.color}
-            badge={progress > 0 ? `${Math.min(progress, 100)}%` : undefined}
-            badgeColor={progress >= 80 ? Colors.success : Colors.primary}
-            defaultOpen={idx === 0}
-          >
-            {pattern.fields.map((field) => renderField(pattern.id, field))}
-          </Accordion>
-        );
-      })}
-
-      {/* Sugerencias NANDA en tiempo real */}
+      {/* Sugerencias NANDA */}
       {suggestions.length > 0 && (
         <View style={styles.suggestionsSection}>
           <Text style={styles.sectionTitle}>
-            🩺 Diagnósticos NANDA Sugeridos ({suggestions.length})
+            🩺 Diagnósticos NANDA ({suggestions.length})
           </Text>
           {suggestions.map((s, i) => (
             <NandaBanner key={`${s.code}-${i}`} diagnosis={s} index={i} />
@@ -301,15 +345,13 @@ export default function AssessmentScreen() {
         </View>
       )}
 
-      {/* Botón de completar */}
+      {/* Botón Completar */}
       <TouchableOpacity
         style={styles.completeButton}
         onPress={handleComplete}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
       >
-        <Text style={styles.completeButtonText}>
-          ✓ Completar Valoración
-        </Text>
+        <Text style={styles.completeButtonText}>✓ Completar Valoración</Text>
         {suggestions.length > 0 && (
           <Text style={styles.completeSubtext}>
             {suggestions.length} diagnóstico(s) detectado(s)
@@ -334,15 +376,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: Spacing.lg,
-  },
-  errorText: {
-    fontSize: FontSize.lg,
-    color: Colors.text,
-    fontWeight: '600',
-  },
+  errorIcon: { fontSize: 48, marginBottom: Spacing.lg },
+  errorText: { fontSize: FontSize.lg, color: Colors.text, fontWeight: '600' },
   backButton: {
     marginTop: Spacing.lg,
     paddingHorizontal: Spacing.xxl,
@@ -350,12 +385,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.lg,
   },
-  backButtonText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: FontSize.md,
+  backButtonText: { color: Colors.white, fontWeight: '700', fontSize: FontSize.md },
+  // Page header
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
   },
-  patientHeader: {
+  pageHeaderLeft: { flex: 1 },
+  greeting: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.text },
+  subHeading: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  headerIcons: { flexDirection: 'row', gap: 4 },
+  headerIcon: { width: 28, height: 28 },
+  // Patient card
+  patientCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -367,39 +411,38 @@ const styles = StyleSheet.create({
     ...Shadows.small,
   },
   patientAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primaryDark + '40',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.primary,
+    marginRight: Spacing.md,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
   },
-  patientInitials: {
-    fontSize: FontSize.xl,
-    color: Colors.primary,
-    fontWeight: '700',
+  patientInitials: { fontSize: FontSize.lg, color: Colors.text, fontWeight: '700' },
+  patientInfo: { flex: 1 },
+  patientNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  patientInfo: {
-    flex: 1,
+  patientName: { fontSize: FontSize.md, color: Colors.text, fontWeight: '700', flex: 1 },
+  editBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  patientName: {
-    fontSize: FontSize.lg,
-    color: Colors.text,
-    fontWeight: '700',
-  },
-  patientDetails: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  patientDiagnosis: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
+  editIcon: { fontSize: 14 },
+  patientDetails: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  patientDiagnosis: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2 },
+  // Alert
   alertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -408,22 +451,12 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.dangerDark + '30',
+    borderColor: Colors.danger + '30',
   },
-  alertIcon: {
-    fontSize: 24,
-    marginRight: Spacing.md,
-  },
-  alertTitle: {
-    fontSize: FontSize.sm,
-    color: Colors.danger,
-    fontWeight: '700',
-  },
-  alertText: {
-    fontSize: FontSize.sm,
-    color: Colors.dangerLight,
-    marginTop: 2,
-  },
+  alertIcon: { fontSize: 20, marginRight: Spacing.md },
+  alertTitle: { fontSize: FontSize.sm, color: Colors.danger, fontWeight: '700' },
+  alertText: { fontSize: FontSize.xs, color: Colors.dangerLight, marginTop: 2 },
+  // BMI
   bmiCard: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
@@ -433,25 +466,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  bmiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  bmiLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  bmiValue: {
-    fontSize: FontSize.xxxl,
-    fontWeight: '800',
-  },
-  bmiCategory: {
-    fontSize: FontSize.md,
-    fontWeight: '700',
-    marginTop: Spacing.xs,
-  },
+  bmiHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  bmiLabel: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600' },
+  bmiValue: { fontSize: FontSize.xxxl, fontWeight: '800' },
+  bmiCategory: { fontSize: FontSize.md, fontWeight: '700', marginTop: Spacing.xs },
   bmiBar: {
     flexDirection: 'row',
     height: 6,
@@ -460,18 +478,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     gap: 2,
   },
-  bmiBarSection: {
-    borderRadius: 3,
-  },
+  bmiBarSection: { borderRadius: 3 },
   bmiLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: Spacing.xs,
   },
-  bmiLabelText: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-  },
+  bmiLabelText: { fontSize: FontSize.xs, color: Colors.textMuted },
+  // Patterns
+  patternsContainer: { marginBottom: Spacing.lg },
   sectionTitle: {
     fontSize: FontSize.lg,
     color: Colors.text,
@@ -479,33 +494,26 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     marginTop: Spacing.md,
   },
-  suggestionsSection: {
-    marginTop: Spacing.lg,
-  },
+  suggestionsSection: { marginTop: Spacing.lg },
+  // Complete button
   completeButton: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.primary,
     borderRadius: BorderRadius.xl,
     paddingVertical: Spacing.xl,
     alignItems: 'center',
     marginTop: Spacing.xxl,
     ...Shadows.medium,
   },
-  completeButtonText: {
-    fontSize: FontSize.lg,
-    color: Colors.white,
-    fontWeight: '800',
-  },
+  completeButtonText: { fontSize: FontSize.lg, color: Colors.white, fontWeight: '800' },
   completeSubtext: {
     fontSize: FontSize.xs,
-    color: Colors.white,
-    opacity: 0.8,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 4,
   },
-  textInputContainer: {
-    marginBottom: Spacing.md,
-  },
+  // Text fields
+  textInputContainer: { marginBottom: Spacing.md },
   textInputLabel: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -519,7 +527,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     fontSize: FontSize.md,
     color: Colors.text,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
   },
   bodyMapPlaceholder: {
@@ -532,21 +540,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderStyle: 'dashed',
   },
-  bodyMapIcon: {
-    fontSize: 40,
-    marginBottom: Spacing.md,
-  },
-  bodyMapText: {
-    fontSize: FontSize.md,
-    color: Colors.text,
-    fontWeight: '600',
-  },
-  bodyMapSubtext: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  bottomSpacer: {
-    height: 40,
-  },
+  bodyMapIcon: { fontSize: 40, marginBottom: Spacing.md },
+  bodyMapText: { fontSize: FontSize.md, color: Colors.text, fontWeight: '600' },
+  bodyMapSubtext: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: Spacing.xs },
+  bottomSpacer: { height: 40 },
 });

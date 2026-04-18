@@ -1,16 +1,30 @@
 /**
- * Layout de tabs - Navegación principal con barra inferior
+ * Layout de tabs — Barra de navegación BitCare
+ * Íconos PNG del paquete de assets
  */
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet, View } from 'react-native';
-import { Colors, FontSize, Spacing } from '../../constants/colors';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/colors';
 
-function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
+function TabIcon({
+  icon,
+  label,
+  focused,
+}: {
+  icon: any;
+  label: string;
+  focused: boolean;
+}) {
   return (
     <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>{icon}</Text>
+      <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+        <Image
+          source={icon}
+          style={[styles.tabImg, focused && styles.tabImgActive]}
+          resizeMode="contain"
+        />
+      </View>
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
-      {focused && <View style={styles.activeIndicator} />}
     </View>
   );
 }
@@ -20,18 +34,19 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.surface,
           shadowColor: Colors.border,
-          elevation: 0,
+          elevation: 1,
         },
         headerTintColor: Colors.text,
         headerTitleStyle: { fontWeight: '700', fontSize: FontSize.lg },
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.border,
-          borderTopWidth: 1,
-          height: 75,
-          paddingBottom: 10,
+          backgroundColor: Colors.primary,
+          borderTopColor: Colors.primary,
+          borderTopWidth: 0,
+          height: 70,
+          paddingBottom: 8,
           paddingTop: 8,
         },
         tabBarShowLabel: false,
@@ -40,9 +55,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'NurseAssess',
+          title: 'Inicio',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" label="Inicio" focused={focused} />
+            <TabIcon
+              icon={require('../../assets/icons/hospital.png')}
+              label="Inicio"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -51,7 +70,11 @@ export default function TabsLayout() {
         options={{
           title: 'Pacientes',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👥" label="Pacientes" focused={focused} />
+            <TabIcon
+              icon={require('../../assets/icons/enfermera.png')}
+              label="Pacientes"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -60,16 +83,24 @@ export default function TabsLayout() {
         options={{
           title: 'Historial',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="📋" label="Historial" focused={focused} />
+            <TabIcon
+              icon={require('../../assets/icons/portapapeles.png')}
+              label="Historial"
+              focused={focused}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Mi Perfil',
+          title: 'Perfil',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👤" label="Perfil" focused={focused} />
+            <TabIcon
+              icon={require('../../assets/icons/doctor.png')}
+              label="Perfil"
+              focused={focused}
+            />
           ),
         }}
       />
@@ -81,31 +112,34 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
-  tabEmoji: {
-    fontSize: 22,
-    opacity: 0.5,
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
-  tabEmojiActive: {
-    opacity: 1,
+  iconWrapActive: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: BorderRadius.md,
+  },
+  tabImg: {
+    width: 22,
+    height: 22,
+    tintColor: 'rgba(255,255,255,0.5)',
+  },
+  tabImgActive: {
+    tintColor: Colors.white,
   },
   tabLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
-    marginTop: 2,
+    fontSize: FontSize.xs - 1,
+    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: Colors.primary,
+    color: Colors.white,
     fontWeight: '700',
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: -8,
-    width: 20,
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 1.5,
   },
 });
