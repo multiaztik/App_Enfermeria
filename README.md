@@ -1,22 +1,31 @@
 # BitCare — NurseAssess
 
-> Sistema de valoración clínica para enfermería basado en los **Patrones de Gordon**.
-> Aplicación móvil + web construida con React Native (Expo) y FastAPI + MongoDB.
+> Sistema de valoración clínica para enfermería basado en los **11 Patrones de Gordon**.
+> Aplicación móvil + web construida con React Native (Expo) — 100% offline, sin servidor.
 
 ---
 
 ## 📱 Características
 
-- **Login y registro real** de enfermeros con JWT y contraseñas hasheadas (bcrypt)
-- **Directorio de pacientes** con búsqueda, filtros y CRUD completo (crear, editar, eliminar)
-- **Valoraciones clínicas** en 3 patrones de Gordon (MVP):
-  - Nutricional-Metabólico
-  - Sueño-Descanso
-  - Tolerancia al Estrés
-- **Motor NANDA-I** para sugerencias diagnósticas automáticas
-- **Mapa corporal interactivo** para localizar síntomas/dolor
-- Funciona en **web y dispositivos móviles** en la misma red local
-- **Sin escáner QR** — los pacientes se identifican por ID generado automáticamente
+- **Login y registro local** de enfermeros con nombre de usuario y contraseña
+- **Directorio de pacientes** con búsqueda y CRUD completo (crear, editar, eliminar)
+- **Valoraciones clínicas** en **11 patrones de Gordon** completos:
+  1. Nutricional-Metabólico
+  2. Sueño-Descanso
+  3. Tolerancia al Estrés
+  4. Percepción-Manejo de Salud
+  5. Eliminación
+  6. Actividad-Ejercicio
+  7. Cognitivo-Perceptual
+  8. Autopercepción-Autoconcepto
+  9. Rol-Relaciones
+  10. Sexualidad-Reproducción
+  11. Valores-Creencias
+- **Motor NANDA-I** para sugerencias diagnósticas automáticas (~30 diagnósticos)
+- **Mapa corporal interactivo** con doble cara (frontal y trasera)
+- Funciona en **web y dispositivos móviles** — sin necesidad de servidor
+- **Almacenamiento local**: SQLite en móvil, AsyncStorage en web
+- Cada usuario ve **solo sus propios pacientes** y valoraciones
 
 ---
 
@@ -24,10 +33,10 @@
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | React Native · Expo SDK 54 · Expo Router |
-| Backend | FastAPI (Python 3.14) · Uvicorn |
-| Base de datos | MongoDB · Motor (AsyncIO) |
-| Auth | JWT (python-jose) · bcrypt |
+| Framework | React Native · Expo SDK 54 · Expo Router |
+| Base de datos (móvil) | SQLite · expo-sqlite |
+| Base de datos (web) | AsyncStorage (localStorage) |
+| Auth | Autenticación local (sin servidor) |
 | Diseño | Sistema "BitCare" — minimalista B&W |
 
 ---
@@ -35,63 +44,29 @@
 ## 🚀 Levantar el proyecto
 
 ### Requisitos
-- Python 3.10+
 - Node.js 18+
-- MongoDB corriendo localmente en `mongodb://localhost:27017`
 
-### ⚡ Ejecución Rápida (En Windows)
+### ⚡ Ejecución Rápida
 
 ```powershell
-# Terminal 1 - Backend
-cd backend
-c:/Users/PC/Documents/GitHub/App_Enfermeria/.venv/Scripts/python.exe -m uvicorn app.main:app --port 8000
-
-# Terminal 2 - Frontend
 cd frontend
+npm install
+```
+
+#### Web
+```powershell
 npx expo start --web --port 8082
 ```
-### ⚡ Ejecución frontend para expo go
-cd frontend
+
+#### Expo Go (Móvil)
+```powershell
 npx expo start -c
 ```
 
-### ⚡ Ejecución backend para expo go
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
 ✅ **La aplicación estará lista en:**
 - **Web:** [http://localhost:8082](http://localhost:8082)
-- **API:** [http://localhost:8000](http://localhost:8000)
-- **Docs API:** [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-### Backend (Detallado)
-
-```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --port 8000
-```
-
-La API estará disponible en:
-- `http://localhost:8000` — API
-- `http://localhost:8000/docs` — Swagger UI (Documentación interactiva)
-
-### Frontend (Detallado)
-
-```bash
-cd frontend
-npm install
-npx expo start --web --port 8082
-```
-
-#### Opciones de Acceso:
-- **Navegador web:** `http://localhost:8082`
 - **Móvil en LAN:** `http://<IP-de-tu-PC>:8082`
-- **Expo Go (iOS/Android):**
-  1. Descarga "Expo Go" desde App Store o Google Play
-  2. Escanea el código QR de la terminal del frontend
-  3. ¡Listo! Se abrirá en tu móvil
+- **Expo Go:** Escanea el QR de la terminal
 
 #### Controles en la Terminal:
 ```
@@ -108,73 +83,80 @@ npx expo start --web --port 8082
 
 ```
 App_Enfermeria/
-├── backend/
-│   └── app/
-│       ├── main.py              # FastAPI + lifespan MongoDB
-│       ├── database.py          # Conexión Motor AsyncIO
-│       ├── config.py            # Variables de entorno
-│       ├── models/              # Modelos Pydantic
-│       ├── routes/              # auth, patients, assessments
-│       └── services/            # JWT + bcrypt
-│
 └── frontend/
-    └── app/
-        ├── login.tsx            # Pantalla de inicio de sesión
-        ├── register.tsx         # Registro de enfermero
-        ├── (tabs)/
-        │   ├── home.tsx         # Dashboard principal
-        │   ├── patients.tsx     # Directorio + CRUD de pacientes
-        │   ├── history.tsx      # Historial de valoraciones
-        │   └── profile.tsx      # Perfil + cerrar sesión
-        ├── patients/
-        │   ├── new.tsx          # Formulario de nuevo paciente
-        │   └── [id]/edit.tsx    # Editar/eliminar paciente
-        └── assessment/
-            └── [patientId].tsx  # Formulario de valoración clínica
+    ├── app/
+    │   ├── login.tsx               # Inicio de sesión (usuario + contraseña)
+    │   ├── register.tsx            # Registro de enfermero
+    │   ├── (tabs)/
+    │   │   ├── home.tsx            # Dashboard — 11 patrones de Gordon
+    │   │   ├── patients.tsx        # Directorio de pacientes
+    │   │   ├── history.tsx         # Historial de valoraciones
+    │   │   └── profile.tsx         # Perfil + cerrar sesión
+    │   ├── patients/
+    │   │   ├── new.tsx             # Nuevo paciente
+    │   │   └── [id]/edit.tsx       # Editar/eliminar paciente
+    │   └── assessment/
+    │       └── [patientId].tsx     # Valoración clínica (11 patrones)
+    ├── components/ui/
+    │   ├── Accordion.tsx           # Acordeón animado
+    │   ├── BodyMap.tsx             # Mapa corporal (frontal + trasera)
+    │   └── Stepper.tsx             # Selector numérico preciso
+    ├── constants/
+    │   ├── colors.ts               # Sistema de diseño BitCare
+    │   └── patterns.ts             # 11 patrones con campos clínicos
+    ├── contexts/
+    │   ├── AuthContext.tsx          # Auth local con SQLite
+    │   └── AssessmentContext.tsx    # Gestión de valoraciones
+    └── utils/
+        ├── database.ts             # SQLite (móvil) / AsyncStorage (web)
+        └── nandaRules.ts           # Motor de diagnóstico NANDA-I
 ```
+
+---
+
+## 🏥 Patrones de Gordon implementados
+
+| # | Patrón | Campos |
+|---|--------|--------|
+| 1 | Nutricional-Metabólico | 16 campos — peso, talla, IMC, edema, piel, mucosas... |
+| 2 | Sueño-Descanso | 8 campos — horas, calidad, insomnio, medicación... |
+| 3 | Tolerancia al Estrés | 8 campos — nivel, estrategias, soporte social... |
+| 4 | Percepción-Manejo de Salud | 9 campos — conocimiento, adherencia, hábitos... |
+| 5 | Eliminación | 9 campos — urinaria, intestinal, cutánea, sondas... |
+| 6 | Actividad-Ejercicio | 11 campos — movilidad, respiración, autocuidado... |
+| 7 | Cognitivo-Perceptual | 9 campos — dolor, orientación, comunicación... |
+| 8 | Autopercepción-Autoconcepto | 6 campos — autoestima, imagen corporal... |
+| 9 | Rol-Relaciones | 8 campos — estructura familiar, comunicación... |
+| 10 | Sexualidad-Reproducción | 5 campos — problemas, anticoncepción... |
+| 11 | Valores-Creencias | 7 campos — espiritualidad, conflictos éticos... |
+
+---
+
+## 🗺 Mapa Corporal
+
+El mapa de edemas tiene **dos vistas interactivas**:
+
+- **🧍 Vista Frontal** — 19 zonas: cabeza, cuello, hombros, tórax, abdomen, pelvis, brazos, antebrazos, manos, muslos, espinillas, pies
+- **🔙 Vista Trasera** — 21 zonas: nuca, espalda alta/baja, sacro, glúteos, codos, pantorrillas, talones
+
+Se alternan con un botón de toggle animado.
 
 ---
 
 ## 🔐 Seguridad
 
-- Las contraseñas se hashean con `bcrypt` antes de guardar en MongoDB
-- Los endpoints de API requieren **Bearer token JWT** (excepto `/login` y `/register`)
-- Los tokens expiran según `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` (default: 30 min)
-
----
-
-## 🏥 Patrones de Gordon implementados (MVP)
-
-| # | Patrón | Campos principales |
-|---|--------|-------------------|
-| 1 | Nutricional-Metabólico | Peso, talla, IMC, apetito, edema, piel, mucosas |
-| 2 | Sueño-Descanso | Horas de sueño, calidad, insomnio, medicación |
-| 3 | Tolerancia al Estrés | Nivel de estrés, estrategias, soporte social |
-
-Los patrones restantes (Percepción, Eliminación, Actividad, etc.) están marcados como **Próximamente**.
-
----
-
-## ⚙️ Variables de entorno (backend)
-
-Crea un archivo `.env` en `/backend`:
-
-```env
-MONGODB_URL=mongodb://localhost:27017
-DATABASE_NAME=nurse_assess
-JWT_SECRET_KEY=tu-clave-secreta-muy-larga
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=480
-```
+- Las contraseñas se almacenan localmente en la base de datos del dispositivo
+- Cada usuario solo puede ver y gestionar sus propios pacientes
+- No se transmiten datos a servidores externos
 
 ---
 
 ## 📝 Notas de desarrollo
 
-- ~~Escáner de código QR~~ — **Eliminado** en favor de IDs generados automáticamente (`PAC-XXXXXX`)
-- El backend usa `motor` (Motor AsyncIO) en lugar de PyMongo para compatibilidad con async/await de FastAPI
-- `passlib` fue reemplazado por `bcrypt` directo por incompatibilidad con Python 3.14
-- Los datos mock de pacientes se usan como **fallback** si el backend no está disponible
+- **Sin servidor** — toda la app funciona offline con SQLite (móvil) y AsyncStorage (web)
+- El módulo `database.ts` detecta automáticamente la plataforma y usa el backend apropiado
+- Las sugerencias NANDA-I se evalúan en tiempo real conforme se llenan los campos
+- Diseño responsivo para web y móvil sin cambios de código
 
 ---
 

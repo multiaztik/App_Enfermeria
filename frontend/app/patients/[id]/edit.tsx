@@ -1,6 +1,6 @@
 /**
  * Pantalla de Edición de Paciente — BitCare
- * Edita datos de un paciente existente en MongoDB
+ * Edita datos de un paciente existente en SQLite
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -9,7 +9,8 @@ import {
   ActivityIndicator, Modal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { patientsApi } from '../../../utils/api';
+import { getPatientById, updatePatient, deletePatient } from '../../../utils/database';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useAssessment } from '../../../contexts/AssessmentContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../../constants/colors';
 
@@ -17,6 +18,7 @@ type Sexo = 'M' | 'F';
 
 export default function EditPatientScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const { loadPatients } = useAssessment();
 
   const [loading, setLoading] = useState(true);
@@ -35,18 +37,22 @@ export default function EditPatientScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!id) return;
-    patientsApi.getById(id).then((p) => {
-      setNombre(p.personal_data.nombre);
-      setEdad(String(p.personal_data.edad));
-      setSexo(p.personal_data.sexo as Sexo);
-      setPeso(p.personal_data.peso ? String(p.personal_data.peso) : '');
-      setTalla(p.personal_data.talla ? String(p.personal_data.talla) : '');
-      setDiagnostico(p.personal_data.diagnostico_medico);
-      setAlergias(p.personal_data.alergias);
+    if (!id || !user) return;
+    getPatientById(Number(id), Number(user.id)).then((p) => {
+      if (!p) {
+        Alert.alert('Error', 'Paciente no encontrado');
+        return;
+      }
+      setNombre(p.nombre);
+      setEdad(String(p.edad));
+      setSexo(p.sexo as Sexo);
+      setPeso(p.peso ? String(p.peso) : '');
+      setTalla(p.talla ? String(p.talla) : '');
+      setDiagnostico(p.diagnostico_medico);
+      setAlergias(p.alergias);
     }).catch(() => Alert.alert('Error', 'No se pudo cargar el paciente'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
 
   const addAlergia = () => {
     const tag = alergiaInput.trim();
@@ -68,21 +74,24 @@ export default function EditPatientScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await patientsApi.update(id!, {
-        personal_data: {
-          nombre: nombre.trim(),
-          edad: Number(edad),
-          sexo,
-          peso: peso ? Number(peso) : undefined,
-          talla: talla ? Number(talla) : undefined,
-          alergias,
-          diagnostico_medico: diagnostico.trim(),
-        },
+      await updatePatient(Number(id), Number(user?.id), {
+        nombre: nombre.trim(),
+        edad: Number(edad),
+        sexo,
+        peso: peso ? Number(peso) : undefined,
+        talla: talla ? Number(talla) : undefined,
+        alergias,
+        diagnostico_medico: diagnostico.trim(),
       });
       await loadPatients();
-      Alert.alert('Éxito', 'Paciente actualizado correctamente.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert('Paciente actualizado correctamente.');
+        router.back();
+      } else {
+        Alert.alert('Éxito', 'Paciente actualizado correctamente.', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (e: unknown) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Error al guardar');
     } finally {
@@ -93,7 +102,7 @@ export default function EditPatientScreen() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await patientsApi.delete(id!);
+      await deletePatient(Number(id), Number(user?.id));
       await loadPatients();
       setShowDelete(false);
       router.replace('/(tabs)/patients');

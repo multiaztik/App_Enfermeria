@@ -46,7 +46,9 @@ export function Accordion({
   const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
 
   const toggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (Platform.OS !== 'web') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
     Animated.timing(rotateAnim, {
       toValue: isOpen ? 0 : 1,
       duration: 200,

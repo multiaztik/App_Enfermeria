@@ -1,7 +1,6 @@
 /**
  * Pantalla de Pacientes — Diseño BitCare
- * Directorio de pacientes con filtros y búsqueda
- * Sin botón de escáner QR
+ * Directorio de pacientes con búsqueda
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -18,12 +17,11 @@ import { useFocusEffect } from 'expo-router';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 
-type FilterTab = 'todos' | 'sexo' | 'sintoma' | 'edad';
+
 
 export default function PatientsScreen() {
   const { patients, loadPatients, selectPatient, startAssessment, isLoading } = useAssessment();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterTab>('todos');
 
   // Carga inicial
   useEffect(() => {
@@ -49,10 +47,6 @@ export default function PatientsScreen() {
     const matchesSearch =
       p.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.diagnostico_medico.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (activeFilter === 'sexo') return matchesSearch && p.sexo === 'F';
-    if (activeFilter === 'edad') return matchesSearch && p.edad > 50;
-    if (activeFilter === 'sintoma') return matchesSearch && p.alergias.length > 0;
     return matchesSearch;
   });
 
@@ -62,12 +56,7 @@ export default function PatientsScreen() {
     router.push(`/assessment/${patient.id}`);
   };
 
-  const filterTabs: { key: FilterTab; label: string }[] = [
-    { key: 'todos', label: 'Todos los pacientes' },
-    { key: 'sexo', label: 'Sexo' },
-    { key: 'sintoma', label: 'Síntoma' },
-    { key: 'edad', label: 'Edad' },
-  ];
+
 
   const renderPatient = ({ item }: { item: typeof patients[0] }) => {
     const initials = item.nombre
@@ -144,27 +133,7 @@ export default function PatientsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filter Tabs */}
-      <View style={styles.filterRow}>
-        {filterTabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.filterTab, activeFilter === tab.key && styles.filterTabActive]}
-            onPress={() => setActiveFilter(tab.key)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.filterTabText,
-                activeFilter === tab.key && styles.filterTabTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+
 
       {/* Búsqueda */}
       <View style={styles.searchRow}>
@@ -265,34 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 26,
   },
-  // Filtros
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.xs,
-    marginBottom: Spacing.md,
-    flexWrap: 'wrap',
-  },
-  filterTab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterTabActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterTabText: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  filterTabTextActive: {
-    color: Colors.white,
-  },
+
   // Búsqueda
   searchRow: {
     flexDirection: 'row',

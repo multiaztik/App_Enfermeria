@@ -1,16 +1,23 @@
 /**
  * Contexto de Valoración Clínica — BitCare
- * Conectado al backend FastAPI + MongoDB
- * Pacientes y valoraciones reales, con fallback offline
+ * Almacenamiento local con SQLite — sin servidor
+ * Pacientes y valoraciones persistentes por usuario
  */
 import React, { createContext, useContext, useReducer } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { evaluateNanda, NandaDiagnosis } from '../utils/nandaRules';
-import { patientsApi, assessmentsApi, ApiPatient } from '../utils/api';
+import { useAuth } from './AuthContext';
+import {
+  getPatients as dbGetPatients,
+  createPatient as dbCreatePatient,
+  updatePatient as dbUpdatePatient,
+  deletePatient as dbDeletePatient,
+  saveAssessment as dbSaveAssessment,
+  getAssessments as dbGetAssessments,
+  DBPatient,
+} from '../utils/database';
 
 export interface Patient {
   id: string;
-  qr_code: string;
   nombre: string;
   edad: number;
   sexo: string;
@@ -28,7 +35,6 @@ export interface Assessment {
   patterns: Record<string, Record<string, unknown>>;
   suggestions: NandaDiagnosis[];
   status: 'in_progress' | 'completed';
-  synced: boolean;
 }
 
 interface AssessmentState {
@@ -47,7 +53,7 @@ type AssessmentAction =
   | { type: 'SET_PATIENTS'; payload: Patient[] }
   | { type: 'START_ASSESSMENT'; payload: Assessment }
   | { type: 'UPDATE_PATTERN'; payload: { patternId: string; data: Record<string, unknown> } }
-  | { type: 'COMPLETE_ASSESSMENT' }
+  | { type: 'COMPLETE_ASSESSMENT'; payload: Assessment }
   | { type: 'SET_SUGGESTIONS'; payload: NandaDiagnosis[] }
   | { type: 'LOAD_ASSESSMENTS'; payload: Assessment[] };
 
@@ -86,17 +92,10 @@ function assessmentReducer(state: AssessmentState, action: AssessmentAction): As
       return { ...state, currentAssessment: updatedAssessment, suggestions };
     }
     case 'COMPLETE_ASSESSMENT': {
-      if (!state.currentAssessment) return state;
-      const completed = {
-        ...state.currentAssessment,
-        status: 'completed' as const,
-        synced: true,
-        suggestions: state.suggestions,
-      };
       return {
         ...state,
-        currentAssessment: completed,
-        assessments: [completed, ...state.assessments],
+        currentAssessment: action.payload,
+        assessments: [action.payload, ...state.assessments],
       };
     }
     case 'SET_SUGGESTIONS':
@@ -108,18 +107,17 @@ function assessmentReducer(state: AssessmentState, action: AssessmentAction): As
   }
 }
 
-/** Convierte el formato API → formato interno Patient */
-function apiPatientToPatient(p: ApiPatient): Patient {
+/** Convierte DBPatient → Patient del contexto */
+function dbPatientToPatient(p: DBPatient): Patient {
   return {
-    id: p.id,
-    qr_code: p.qr_code,
-    nombre: p.personal_data.nombre,
-    edad: p.personal_data.edad,
-    sexo: p.personal_data.sexo,
-    peso: p.personal_data.peso,
-    talla: p.personal_data.talla,
-    alergias: p.personal_data.alergias,
-    diagnostico_medico: p.personal_data.diagnostico_medico,
+    id: String(p.id),
+    nombre: p.nombre,
+    edad: p.edad,
+    sexo: p.sexo,
+    peso: p.peso ?? undefined,
+    talla: p.talla ?? undefined,
+    alergias: p.alergias,
+    diagnostico_medico: p.diagnostico_medico,
   };
 }
 
@@ -129,74 +127,15 @@ interface AssessmentContextType extends AssessmentState {
   startAssessment: (patientId: string) => void;
   updatePattern: (patternId: string, data: Record<string, unknown>) => void;
   completeAssessment: () => Promise<void>;
-  findPatientByQR: (qrCode: string) => Patient | undefined;
-  loadMockPatients: () => void;        // funciona como loadPatients (compatibilidad)
   loadPatients: (search?: string) => Promise<void>;
+  loadMockPatients: () => void;
 }
 
 const AssessmentContext = createContext<AssessmentContextType | undefined>(undefined);
 
-// Pacientes mock como fallback offline
-const MOCK_PATIENTS: Patient[] = [
-  {
-    id: '1',
-    qr_code: 'UAZ-2026-001',
-    nombre: 'Juan Pérez García',
-    edad: 45,
-    sexo: 'M',
-    peso: 72.5,
-    talla: 1.68,
-    alergias: ['Penicilina'],
-    diagnostico_medico: 'Diabetes Mellitus Tipo 2',
-  },
-  {
-    id: '2',
-    qr_code: 'UAZ-2026-002',
-    nombre: 'María López Hernández',
-    edad: 62,
-    sexo: 'F',
-    peso: 58.0,
-    talla: 1.55,
-    alergias: [],
-    diagnostico_medico: 'Hipertensión Arterial',
-  },
-  {
-    id: '3',
-    qr_code: 'UAZ-2026-003',
-    nombre: 'Carlos Ramírez Torres',
-    edad: 78,
-    sexo: 'M',
-    peso: 50.2,
-    talla: 1.70,
-    alergias: ['Sulfonamidas', 'Aspirina'],
-    diagnostico_medico: 'Insuficiencia Cardíaca Congestiva',
-  },
-  {
-    id: '4',
-    qr_code: 'UAZ-2026-004',
-    nombre: 'Ana Martínez Ruiz',
-    edad: 34,
-    sexo: 'F',
-    peso: 95.0,
-    talla: 1.60,
-    alergias: [],
-    diagnostico_medico: 'Embarazo 32 SDG',
-  },
-  {
-    id: '5',
-    qr_code: 'UAZ-2026-005',
-    nombre: 'Roberto Díaz Flores',
-    edad: 55,
-    sexo: 'M',
-    peso: 82.0,
-    talla: 1.75,
-    alergias: ['Ibuprofeno'],
-    diagnostico_medico: 'EPOC',
-  },
-];
-
 export function AssessmentProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(assessmentReducer, initialState);
+  const { user } = useAuth();
 
   const selectPatient = (patient: Patient) => {
     dispatch({ type: 'SET_PATIENT', payload: patient });
@@ -211,11 +150,10 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
       id: `assess-${Date.now()}`,
       patientId,
       date: new Date().toISOString(),
-      nurseId: 'current',
+      nurseId: user?.id || 'unknown',
       patterns: {},
       suggestions: [],
       status: 'in_progress',
-      synced: false,
     };
     dispatch({ type: 'START_ASSESSMENT', payload: assessment });
   };
@@ -226,51 +164,51 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
   /**
    * Completar valoración:
-   * 1. Guarda en MongoDB via API
-   * 2. Si falla, guarda localmente (modo offline)
-   * 3. Actualiza el estado global
+   * Guarda directamente en SQLite — sin red, sin servidor
    */
   const completeAssessment = async () => {
-    dispatch({ type: 'COMPLETE_ASSESSMENT' });
+    if (!state.currentAssessment || !user) return;
 
     try {
-      // Intentar guardar en MongoDB
-      if (state.currentAssessment) {
-        await assessmentsApi.create({
-          patient_id: state.currentAssessment.patientId,
-          patterns: state.currentAssessment.patterns,
-        });
-      }
+      const saved = await dbSaveAssessment(Number(user.id), {
+        patient_id: Number(state.currentAssessment.patientId),
+        patterns: state.currentAssessment.patterns,
+        suggestions: state.suggestions,
+        status: 'completed',
+      });
+
+      const completed: Assessment = {
+        ...state.currentAssessment,
+        id: String(saved.id),
+        status: 'completed',
+        suggestions: state.suggestions,
+      };
+
+      dispatch({ type: 'COMPLETE_ASSESSMENT', payload: completed });
     } catch (error) {
-      console.warn('No se pudo guardar en el servidor, guardando localmente:', error);
-      // Fallback offline
-      try {
-        const stored = await AsyncStorage.getItem('assessments_offline');
-        const assessments = stored ? JSON.parse(stored) : [];
-        assessments.unshift(state.currentAssessment);
-        await AsyncStorage.setItem('assessments_offline', JSON.stringify(assessments));
-      } catch (storageError) {
-        console.error('Error guardando offline:', storageError);
-      }
+      console.error('Error guardando valoración:', error);
+      // Si falla SQLite, igualmente completar en memoria
+      const completed: Assessment = {
+        ...state.currentAssessment,
+        status: 'completed',
+        suggestions: state.suggestions,
+      };
+      dispatch({ type: 'COMPLETE_ASSESSMENT', payload: completed });
     }
   };
 
   /**
-   * Cargar pacientes desde el API real
-   * Fallback a datos mock si el servidor no responde
+   * Cargar pacientes desde SQLite (filtrados por usuario logueado)
    */
   const loadPatients = async (search?: string) => {
+    if (!user) return;
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const apiPatients = await patientsApi.getAll(search);
-      const patients = apiPatients.map(apiPatientToPatient);
+      const dbPatients = await dbGetPatients(Number(user.id), search);
+      const patients = dbPatients.map(dbPatientToPatient);
       dispatch({ type: 'SET_PATIENTS', payload: patients });
     } catch (error) {
-      console.warn('Backend no disponible, usando datos mock:', error);
-      // Usar mock solo si no hay pacientes cargados
-      if (state.patients.length === 0) {
-        dispatch({ type: 'SET_PATIENTS', payload: MOCK_PATIENTS });
-      }
+      console.error('Error cargando pacientes:', error);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -278,11 +216,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
 
   /** Compatibilidad con pantallas que llaman loadMockPatients */
   const loadMockPatients = () => {
-    loadPatients(); // intenta API primero, fallback a mock
-  };
-
-  const findPatientByQR = (qrCode: string): Patient | undefined => {
-    return state.patients.find((p) => p.qr_code === qrCode);
+    loadPatients();
   };
 
   return (
@@ -294,9 +228,8 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         startAssessment,
         updatePattern,
         completeAssessment,
-        findPatientByQR,
-        loadMockPatients,
         loadPatients,
+        loadMockPatients,
       }}
     >
       {children}

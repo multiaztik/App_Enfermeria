@@ -1,6 +1,6 @@
 /**
  * Pantalla de Registro de Paciente — BitCare
- * Formulario completo para crear un nuevo paciente en MongoDB
+ * Formulario completo para crear un nuevo paciente en SQLite
  */
 import React, { useState, useRef } from 'react';
 import {
@@ -17,7 +17,8 @@ import {
   Animated,
 } from 'react-native';
 import { router } from 'expo-router';
-import { patientsApi } from '../../utils/api';
+import { createPatient } from '../../utils/database';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 
@@ -33,7 +34,6 @@ interface FormState {
   diagnostico_medico: string;
   alergias: string[];
   alergiaInput: string;
-  qr_code: string;
 }
 
 const INITIAL_FORM: FormState = {
@@ -45,11 +45,11 @@ const INITIAL_FORM: FormState = {
   diagnostico_medico: '',
   alergias: [],
   alergiaInput: '',
-  qr_code: '',
 };
 
 /* ─── Componente Principal ─────────────────────────────────────────────── */
 export default function NewPatientScreen() {
+  const { user } = useAuth();
   const { loadPatients } = useAssessment();
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
@@ -62,11 +62,6 @@ export default function NewPatientScreen() {
       duration: 350,
       useNativeDriver: true,
     }).start();
-    // Generar QR automático
-    setForm((f) => ({
-      ...f,
-      qr_code: `PAC-${Date.now().toString(36).toUpperCase()}`,
-    }));
   }, []);
 
   const update = (key: keyof FormState, value: string) => {
@@ -111,26 +106,28 @@ export default function NewPatientScreen() {
 
     setSaving(true);
     try {
-      await patientsApi.create({
-        qr_code: form.qr_code,
-        personal_data: {
-          nombre: form.nombre.trim(),
-          edad: Number(form.edad),
-          sexo: form.sexo,
-          peso: form.peso ? Number(form.peso) : undefined,
-          talla: form.talla ? Number(form.talla) : undefined,
-          alergias: form.alergias,
-          diagnostico_medico: form.diagnostico_medico.trim(),
-        },
+      await createPatient(Number(user?.id), {
+        nombre: form.nombre.trim(),
+        edad: Number(form.edad),
+        sexo: form.sexo,
+        peso: form.peso ? Number(form.peso) : undefined,
+        talla: form.talla ? Number(form.talla) : undefined,
+        alergias: form.alergias,
+        diagnostico_medico: form.diagnostico_medico.trim(),
       });
 
       await loadPatients();
 
-      Alert.alert(
-        'Éxito',
-        `${form.nombre.trim()} fue añadido correctamente.`,
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      if (Platform.OS === 'web') {
+        window.alert(`${form.nombre.trim()} fue añadido correctamente.`);
+        router.back();
+      } else {
+        Alert.alert(
+          'Éxito',
+          `${form.nombre.trim()} fue añadido correctamente.`,
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Error al guardar';
       Alert.alert('Error', msg);
@@ -160,12 +157,7 @@ export default function NewPatientScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* QR Badge */}
-        <View style={styles.qrBadge}>
-          <Text style={styles.qrLabel}>ID del Paciente</Text>
-          <Text style={styles.qrValue}>{form.qr_code}</Text>
-          <Text style={styles.qrHint}>Generado automáticamente</Text>
-        </View>
+
 
         {/* ── Datos Personales ── */}
         <SectionTitle>Datos Personales</SectionTitle>

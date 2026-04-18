@@ -1,6 +1,6 @@
 /**
  * Motor de Reglas NANDA-I para Sugerencias Diagnósticas
- * Implementa reglas booleanas para los 3 patrones del MVP
+ * Implementa reglas booleanas para los 11 patrones de Gordon
  */
 
 export interface NandaDiagnosis {
@@ -315,6 +315,355 @@ function evaluateStress(data: AssessmentData): NandaDiagnosis[] {
   return diagnoses;
 }
 
+/** Reglas para el Patrón Percepción-Manejo de Salud */
+function evaluatePerception(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Percepción de salud mala + no sigue tratamiento
+  if (data.health_perception === 'poor' && data.follows_treatment === false) {
+    diagnoses.push({
+      code: '00078',
+      name: 'Gestión Ineficaz de la Salud',
+      nameEs: 'Gestión Ineficaz de la Salud',
+      priority: 'high',
+      evidence: ['Percepción de salud: Mala', 'No sigue indicaciones médicas'],
+      pattern: 'perception',
+    });
+  }
+
+  // Adherencia parcial o nula
+  if (data.treatment_adherence === 'partial' || data.treatment_adherence === 'none') {
+    diagnoses.push({
+      code: '00079',
+      name: 'Incumplimiento del Tratamiento',
+      nameEs: 'Incumplimiento del Tratamiento',
+      priority: data.treatment_adherence === 'none' ? 'high' : 'medium',
+      evidence: [`Adherencia al tratamiento: ${data.treatment_adherence}`],
+      pattern: 'perception',
+    });
+  }
+
+  // Consumo de sustancias nocivas
+  const substances = (data.substance_use as string[]) || [];
+  const harmfulSubstances = substances.filter(s => s !== 'none');
+  if (harmfulSubstances.length > 0) {
+    diagnoses.push({
+      code: '00188',
+      name: 'Tendencia a Adoptar Conductas de Riesgo para la Salud',
+      nameEs: 'Tendencia a Adoptar Conductas de Riesgo para la Salud',
+      priority: harmfulSubstances.includes('drugs') ? 'high' : 'medium',
+      evidence: harmfulSubstances.map(s => `Consumo de: ${s}`),
+      pattern: 'perception',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Eliminación */
+function evaluateElimination(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Síntomas urinarios
+  const urinarySymptoms = (data.urinary_symptoms as string[]) || [];
+  if (urinarySymptoms.includes('incontinence')) {
+    diagnoses.push({
+      code: '00017',
+      name: 'Incontinencia Urinaria de Esfuerzo',
+      nameEs: 'Incontinencia Urinaria de Esfuerzo',
+      priority: 'high',
+      evidence: ['Incontinencia urinaria presente'],
+      pattern: 'elimination',
+    });
+  }
+  if (urinarySymptoms.includes('retention')) {
+    diagnoses.push({
+      code: '00023',
+      name: 'Retención Urinaria',
+      nameEs: 'Retención Urinaria',
+      priority: 'high',
+      evidence: ['Retención urinaria presente'],
+      pattern: 'elimination',
+    });
+  }
+
+  // Síntomas intestinales
+  const bowelSymptoms = (data.bowel_symptoms as string[]) || [];
+  if (bowelSymptoms.includes('constipation') || data.stool_consistency === 'hard') {
+    diagnoses.push({
+      code: '00011',
+      name: 'Estreñimiento',
+      nameEs: 'Estreñimiento',
+      priority: 'medium',
+      evidence: ['Estreñimiento presente'],
+      pattern: 'elimination',
+    });
+  }
+  if (bowelSymptoms.includes('diarrhea') || data.stool_consistency === 'liquid') {
+    diagnoses.push({
+      code: '00013',
+      name: 'Diarrea',
+      nameEs: 'Diarrea',
+      priority: 'medium',
+      evidence: ['Diarrea presente'],
+      pattern: 'elimination',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Actividad-Ejercicio */
+function evaluateActivity(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Movilidad reducida
+  if (data.mobility_level === 'total_help' || data.mobility_level === 'bedridden') {
+    diagnoses.push({
+      code: '00085',
+      name: 'Deterioro de la Movilidad Física',
+      nameEs: 'Deterioro de la Movilidad Física',
+      priority: 'high',
+      evidence: [`Nivel de movilidad: ${data.mobility_level}`],
+      pattern: 'activity',
+    });
+  }
+
+  // Disnea
+  if (data.dyspnea === true) {
+    diagnoses.push({
+      code: '00032',
+      name: 'Patrón Respiratorio Ineficaz',
+      nameEs: 'Patrón Respiratorio Ineficaz',
+      priority: data.dyspnea_type === 'rest' ? 'high' : 'medium',
+      evidence: [
+        'Disnea presente',
+        data.dyspnea_type ? `Tipo: ${data.dyspnea_type}` : '',
+      ].filter(Boolean),
+      pattern: 'activity',
+    });
+  }
+
+  // Saturación baja
+  const spo2 = data.oxygen_saturation as number;
+  if (spo2 && spo2 < 92) {
+    diagnoses.push({
+      code: '00030',
+      name: 'Deterioro del Intercambio Gaseoso',
+      nameEs: 'Deterioro del Intercambio Gaseoso',
+      priority: spo2 < 88 ? 'high' : 'medium',
+      evidence: [`SpO2: ${spo2}% (< 92%)`],
+      pattern: 'activity',
+    });
+  }
+
+  // Déficit de autocuidado
+  if (data.self_care_deficit === true) {
+    const areas = (data.self_care_areas as string[]) || [];
+    diagnoses.push({
+      code: '00108',
+      name: 'Déficit de Autocuidado',
+      nameEs: 'Déficit de Autocuidado',
+      priority: areas.length >= 3 ? 'high' : 'medium',
+      evidence: [
+        'Déficit de autocuidado presente',
+        ...areas.map(a => `Área: ${a}`),
+      ],
+      pattern: 'activity',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Cognitivo-Perceptual */
+function evaluateCognitive(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Dolor
+  if (data.pain_present === true) {
+    const painLevel = data.pain_level as number;
+    diagnoses.push({
+      code: data.pain_type === 'chronic' ? '00133' : '00132',
+      name: data.pain_type === 'chronic' ? 'Dolor Crónico' : 'Dolor Agudo',
+      nameEs: data.pain_type === 'chronic' ? 'Dolor Crónico' : 'Dolor Agudo',
+      priority: painLevel && painLevel >= 7 ? 'high' : 'medium',
+      evidence: [
+        'Dolor presente',
+        painLevel ? `EVA: ${painLevel}/10` : '',
+        data.pain_location ? `Localización: ${data.pain_location}` : '',
+      ].filter(Boolean),
+      pattern: 'cognitive',
+    });
+  }
+
+  // Nivel de conciencia alterado
+  if (data.consciousness_level && data.consciousness_level !== 'alert') {
+    diagnoses.push({
+      code: '00128',
+      name: 'Confusión Aguda',
+      nameEs: 'Confusión Aguda',
+      priority: data.consciousness_level === 'unconscious' ? 'high' : 'medium',
+      evidence: [`Nivel de conciencia: ${data.consciousness_level}`],
+      pattern: 'cognitive',
+    });
+  }
+
+  // Alteración comunicación
+  if (data.communication_ability && data.communication_ability !== 'normal') {
+    diagnoses.push({
+      code: '00051',
+      name: 'Deterioro de la Comunicación Verbal',
+      nameEs: 'Deterioro de la Comunicación Verbal',
+      priority: data.communication_ability === 'non_verbal' ? 'high' : 'medium',
+      evidence: [`Comunicación: ${data.communication_ability}`],
+      pattern: 'cognitive',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Autopercepción-Autoconcepto */
+function evaluateSelfPerception(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Autoestima baja
+  if (data.self_esteem === 'low' || data.self_esteem === 'very_low') {
+    diagnoses.push({
+      code: '00119',
+      name: 'Baja Autoestima Crónica',
+      nameEs: 'Baja Autoestima Crónica',
+      priority: data.self_esteem === 'very_low' ? 'high' : 'medium',
+      evidence: [`Autoestima: ${data.self_esteem}`],
+      pattern: 'self_perception',
+    });
+  }
+
+  // Alteración de imagen corporal
+  if (data.body_image_disturbance === true) {
+    diagnoses.push({
+      code: '00118',
+      name: 'Trastorno de la Imagen Corporal',
+      nameEs: 'Trastorno de la Imagen Corporal',
+      priority: 'medium',
+      evidence: ['Alteración de la imagen corporal presente'],
+      pattern: 'self_perception',
+    });
+  }
+
+  // Desesperanza
+  if (data.expresses_hopelessness === true) {
+    diagnoses.push({
+      code: '00124',
+      name: 'Desesperanza',
+      nameEs: 'Desesperanza',
+      priority: 'high',
+      evidence: ['Expresa sentimientos de desesperanza'],
+      pattern: 'self_perception',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Rol-Relaciones */
+function evaluateRole(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  // Aislamiento social
+  if (data.social_isolation === true) {
+    diagnoses.push({
+      code: '00053',
+      name: 'Aislamiento Social',
+      nameEs: 'Aislamiento Social',
+      priority: 'medium',
+      evidence: ['Se siente aislado socialmente'],
+      pattern: 'role',
+    });
+  }
+
+  // Violencia doméstica
+  if (data.domestic_violence === true) {
+    diagnoses.push({
+      code: '00138',
+      name: 'Riesgo de Violencia Dirigida a Otros',
+      nameEs: 'Riesgo de Violencia Dirigida a Otros',
+      priority: 'high',
+      evidence: ['Indicios de violencia doméstica'],
+      pattern: 'role',
+    });
+  }
+
+  // Cambios en rol familiar
+  if (data.role_changes === true && data.interpersonal_conflicts === true) {
+    diagnoses.push({
+      code: '00064',
+      name: 'Conflicto del Rol Parental',
+      nameEs: 'Conflicto del Rol Parental',
+      priority: 'medium',
+      evidence: ['Cambios de rol recientes', 'Conflictos interpersonales presentes'],
+      pattern: 'role',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Sexualidad-Reproducción */
+function evaluateSexuality(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  if (data.sexual_concerns === true) {
+    const concerns = (data.sexual_concern_type as string[]) || [];
+    diagnoses.push({
+      code: '00059',
+      name: 'Disfunción Sexual',
+      nameEs: 'Disfunción Sexual',
+      priority: 'medium',
+      evidence: [
+        'Preocupaciones sexuales presentes',
+        ...concerns.map(c => `Tipo: ${c}`),
+      ],
+      pattern: 'sexuality',
+    });
+  }
+
+  return diagnoses;
+}
+
+/** Reglas para el Patrón Valores-Creencias */
+function evaluateValues(data: AssessmentData): NandaDiagnosis[] {
+  const diagnoses: NandaDiagnosis[] = [];
+
+  if (data.spiritual_distress === true) {
+    diagnoses.push({
+      code: '00066',
+      name: 'Sufrimiento Espiritual',
+      nameEs: 'Sufrimiento Espiritual',
+      priority: 'medium',
+      evidence: ['Sufrimiento espiritual expresado'],
+      pattern: 'values',
+    });
+  }
+
+  if (data.treatment_beliefs === true) {
+    diagnoses.push({
+      code: '00083',
+      name: 'Conflicto de Decisiones',
+      nameEs: 'Conflicto de Decisiones',
+      priority: 'medium',
+      evidence: [
+        'Las creencias afectan el tratamiento',
+        data.treatment_beliefs_detail ? `Detalle: ${data.treatment_beliefs_detail}` : '',
+      ].filter(Boolean),
+      pattern: 'values',
+    });
+  }
+
+  return diagnoses;
+}
+
 /**
  * Motor principal de evaluación NANDA
  * Evalúa todos los patrones proporcionados y retorna diagnósticos sugeridos
@@ -330,6 +679,30 @@ export function evaluateNanda(allPatternData: Record<string, AssessmentData>): N
   }
   if (allPatternData.stress) {
     allDiagnoses.push(...evaluateStress(allPatternData.stress));
+  }
+  if (allPatternData.perception) {
+    allDiagnoses.push(...evaluatePerception(allPatternData.perception));
+  }
+  if (allPatternData.elimination) {
+    allDiagnoses.push(...evaluateElimination(allPatternData.elimination));
+  }
+  if (allPatternData.activity) {
+    allDiagnoses.push(...evaluateActivity(allPatternData.activity));
+  }
+  if (allPatternData.cognitive) {
+    allDiagnoses.push(...evaluateCognitive(allPatternData.cognitive));
+  }
+  if (allPatternData.self_perception) {
+    allDiagnoses.push(...evaluateSelfPerception(allPatternData.self_perception));
+  }
+  if (allPatternData.role) {
+    allDiagnoses.push(...evaluateRole(allPatternData.role));
+  }
+  if (allPatternData.sexuality) {
+    allDiagnoses.push(...evaluateSexuality(allPatternData.sexuality));
+  }
+  if (allPatternData.values) {
+    allDiagnoses.push(...evaluateValues(allPatternData.values));
   }
 
   // Ordenar por prioridad

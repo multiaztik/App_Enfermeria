@@ -16,44 +16,21 @@ import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
-import { FUTURE_PATTERNS } from '../../constants/patterns';
+import { PATTERNS } from '../../constants/patterns';
 
-// Definición rica de los 3 patrones MVP con descripción, campos y ícono
-const MVP_PATTERNS = [
-  {
-    id: 'nutritional',
-    name: 'Nutricional-Metabólico',
-    icon: require('../../assets/icons/estomago.png'),
-    descripcion: 'Evalúa el estado nutricional, metabólico e integridad de la piel.',
-    evalua: ['Peso / Talla / IMC', 'Apetito y deglución', 'Mucosa oral y piel', 'Glucosa y albúmina'],
-  },
-  {
-    id: 'sleep',
-    name: 'Sueño-Descanso',
-    icon: require('../../assets/icons/cerebro.png'),
-    descripcion: 'Evalúa la calidad y cantidad del sueño y el descanso del paciente.',
-    evalua: ['Horas de sueño', 'Calidad / tipo de insomnio', 'Medicación para dormir', 'Fatiga diurna'],
-  },
-  {
-    id: 'stress',
-    name: 'Tolerancia al Estrés',
-    icon: require('../../assets/icons/cardiograma.png'),
-    descripcion: 'Evalúa los niveles de estrés, mecanismos de afrontamiento y apoyo.',
-    evalua: ['Nivel de estrés', 'Estrategia de afrontamiento', 'Signos de ansiedad', 'Red de apoyo'],
-  },
-];
-
-// Íconos para patrones futuros
-const FUTURE_ICONS: Record<string, any> = {
+// Íconos PNG para cada patrón en la home
+const PATTERN_ICONS: Record<string, any> = {
+  nutritional: require('../../assets/icons/estomago.png'),
+  sleep: require('../../assets/icons/cerebro.png'),
+  stress: require('../../assets/icons/cardiograma.png'),
   perception: require('../../assets/icons/ojo.png'),
+  elimination: require('../../assets/icons/donacion-de-sangre.png'),
   activity: require('../../assets/icons/pecho.png'),
   cognitive: require('../../assets/icons/cerebro.png'),
   self_perception: require('../../assets/icons/enfermera.png'),
   role: require('../../assets/icons/doctor.png'),
   sexuality: require('../../assets/icons/utero.png'),
   values: require('../../assets/icons/historial-medico.png'),
-  health_management: require('../../assets/icons/pildora.png'),
-  elimination: require('../../assets/icons/donacion-de-sangre.png'),
 };
 
 export default function HomeScreen() {
@@ -124,41 +101,38 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Patrones MVP — con descripción y qué evalúan */}
-        <Text style={styles.sectionTitle}>Patrones de Gordon • MVP</Text>
+        {/* Patrones de Gordon — los 11 */}
+        <Text style={styles.sectionTitle}>11 Patrones de Gordon</Text>
         <View style={styles.patternsContainer}>
-          {MVP_PATTERNS.map((pattern, idx) => (
+          {PATTERNS.map((pattern, idx) => {
+            const iconSrc = PATTERN_ICONS[pattern.id];
+            return (
             <TouchableOpacity
               key={pattern.id}
-              style={[styles.patternCard, idx < MVP_PATTERNS.length - 1 && styles.patternCardBorder]}
+              style={[styles.patternCard, idx < PATTERNS.length - 1 && styles.patternCardBorder]}
               onPress={() => router.push('/(tabs)/patients')}
               activeOpacity={0.7}
             >
               {/* Ícono y nombre */}
               <View style={styles.patternHeader}>
                 <View style={styles.patternIconWrap}>
-                  <Image source={pattern.icon} style={styles.patternImg} resizeMode="contain" />
+                  {iconSrc ? (
+                    <Image source={iconSrc} style={styles.patternImg} resizeMode="contain" />
+                  ) : (
+                    <Text style={{ fontSize: 20 }}>{pattern.icon}</Text>
+                  )}
                 </View>
                 <View style={styles.patternTitleWrap}>
                   <Text style={styles.patternName}>{pattern.name}</Text>
-                  <Text style={styles.patternDesc}>{pattern.descripcion}</Text>
+                  <Text style={styles.patternDesc}>{pattern.description}</Text>
                 </View>
                 <View style={styles.patternChevronWrap}>
                   <Text style={styles.patternChevron}>›</Text>
                 </View>
               </View>
-
-              {/* Lo que evalúa */}
-              <View style={styles.evalua}>
-                {pattern.evalua.map((item, i) => (
-                  <View key={i} style={styles.evaluaItem}>
-                    <View style={styles.evaluaDot} />
-                    <Text style={styles.evaluaText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
 
         {/* Acceso rápido a pacientes */}
@@ -176,24 +150,7 @@ export default function HomeScreen() {
           <Text style={styles.patientsButtonArrow}>›</Text>
         </TouchableOpacity>
 
-        {/* Próximamente */}
-        <Text style={[styles.sectionTitle, { marginTop: Spacing.xxl }]}>Próximamente</Text>
-        <View style={styles.futureGrid}>
-          {FUTURE_PATTERNS.map((p) => {
-            const iconSrc = FUTURE_ICONS[p.id];
-            return (
-              <View key={p.id} style={styles.futureCard}>
-                {iconSrc ? (
-                  <Image source={iconSrc} style={styles.futureImg} resizeMode="contain" />
-                ) : (
-                  <Text style={styles.futureEmoji}>{p.icon}</Text>
-                )}
-                <Text style={styles.futureName} numberOfLines={2}>{p.name}</Text>
-                <Text style={styles.futureLock}>🔒</Text>
-              </View>
-            );
-          })}
-        </View>
+
 
         <View style={styles.bottomSpacer} />
       </Animated.View>
@@ -354,29 +311,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: -2,
   },
-  // Lo que evalúa — puntos bajo cada patrón
-  evalua: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginLeft: 56, // alinea con el texto del título
-  },
-  evaluaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  evaluaDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: Colors.textMuted,
-  },
-  evaluaText: {
-    fontSize: FontSize.xs - 1,
-    color: Colors.textMuted,
-    fontWeight: '500',
-  },
+
   // Botón pacientes
   patientsButton: {
     flexDirection: 'row',
@@ -403,42 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.white,
     fontWeight: '700',
-  },
-  // Future
-  futureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xxxl,
-  },
-  futureCard: {
-    width: '30%',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    opacity: 0.5,
-  },
-  futureImg: {
-    width: 28,
-    height: 28,
-    marginBottom: Spacing.xs,
-  },
-  futureEmoji: {
-    fontSize: 24,
-    marginBottom: Spacing.xs,
-  },
-  futureName: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  futureLock: {
-    fontSize: 12,
-    marginTop: Spacing.xs,
   },
   bottomSpacer: {
     height: 20,

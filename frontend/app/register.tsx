@@ -25,11 +25,12 @@ const PIN_ICON = require('../assets/icons/pin.png');
 export default function RegisterScreen() {
   const { register, isLoading } = useAuth();
   const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [cedula, setCedula] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [consentimiento, setConsentimiento] = useState(false);
   const [error, setError] = useState('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
@@ -43,7 +44,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     setError('');
-    if (!nombre.trim() || !email.trim() || !cedula.trim() || !password.trim()) {
+    if (!nombre.trim() || !username.trim() || !cedula.trim() || !password.trim()) {
       setError('Todos los campos son requeridos.');
       return;
     }
@@ -55,8 +56,12 @@ export default function RegisterScreen() {
       setError('Las contraseñas no coinciden.');
       return;
     }
+    if (!consentimiento) {
+      setError('Debes aceptar el aviso de privacidad y consentimiento de investigación.');
+      return;
+    }
     try {
-      await register({ email: email.trim(), password, nombre: nombre.trim(), cedula: cedula.trim() });
+      await register({ username: username.trim(), password, nombre: nombre.trim(), cedula: cedula.trim(), consentimiento_legal: consentimiento });
       router.replace('/(tabs)/home');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error al registrarse';
@@ -107,16 +112,15 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Email */}
+            {/* Usuario */}
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Correo institucional</Text>
+              <Text style={styles.fieldLabel}>Nombre de usuario</Text>
               <TextInput
                 style={styles.input}
-                placeholder="enfermero@uaz.edu.mx"
+                placeholder="Ej: maria.gonzalez"
                 placeholderTextColor={Colors.textMuted}
-                value={email}
-                onChangeText={(v) => { setEmail(v); setError(''); }}
-                keyboardType="email-address"
+                value={username}
+                onChangeText={(v) => { setUsername(v); setError(''); }}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -165,6 +169,23 @@ export default function RegisterScreen() {
                 secureTextEntry={!showPass}
               />
             </View>
+
+            {/* Consentimiento Legal — ARCO / LFPDPPP */}
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => { setConsentimiento(!consentimiento); setError(''); }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, consentimiento && styles.checkboxChecked]}>
+                {consentimiento && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkLabel}>
+                He leído y acepto el{' '}
+                <Text style={styles.checkLink}>Aviso de Privacidad</Text>
+                {' '}(LFPDPPP y NOM-024-SSA3-2012) y consiento el uso de mis datos
+                con fines académicos de investigación — UAZ.
+              </Text>
+            </TouchableOpacity>
 
             {/* Botón */}
             <TouchableOpacity
@@ -258,4 +279,36 @@ const styles = StyleSheet.create({
   loginLink: { marginTop: Spacing.xl, alignItems: 'center' },
   loginLinkText: { fontSize: FontSize.sm, color: Colors.textSecondary },
   loginLinkBold: { fontWeight: '700', color: Colors.text },
+  // Consentimiento
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+    marginTop: Spacing.sm,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkmark: { fontSize: 13, color: Colors.white, fontWeight: '800' },
+  checkLabel: {
+    flex: 1,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  checkLink: { color: Colors.primary, fontWeight: '700' },
 });

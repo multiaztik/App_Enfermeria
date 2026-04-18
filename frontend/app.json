@@ -8,7 +8,11 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "scheme": "nurseassess",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -28,7 +32,9 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.nurseassess.app",
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -42,7 +48,8 @@
         {
           "cameraPermission": "Se requiere acceso a la cámara para escanear códigos QR."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

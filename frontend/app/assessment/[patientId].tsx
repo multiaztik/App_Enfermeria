@@ -2,7 +2,7 @@
  * Pantalla principal de Valoración Clínica — Diseño BitCare
  * Header con datos del paciente + acordeones de patrones + diagnósticos NANDA
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   TextInput,
   Image,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAssessment } from '../../contexts/AssessmentContext';
@@ -33,6 +34,14 @@ const PATTERN_ICONS: Record<string, any> = {
   nutritional: require('../../assets/icons/estomago.png'),
   sleep: require('../../assets/icons/cerebro.png'),
   stress: require('../../assets/icons/cardiograma.png'),
+  perception: require('../../assets/icons/ojo.png'),
+  elimination: require('../../assets/icons/donacion-de-sangre.png'),
+  activity: require('../../assets/icons/pecho.png'),
+  cognitive: require('../../assets/icons/cerebro.png'),
+  self_perception: require('../../assets/icons/enfermera.png'),
+  role: require('../../assets/icons/doctor.png'),
+  sexuality: require('../../assets/icons/utero.png'),
+  values: require('../../assets/icons/historial-medico.png'),
 };
 
 export default function AssessmentScreen() {
@@ -64,21 +73,35 @@ export default function AssessmentScreen() {
     return patternData[patternId]?.[fieldId];
   };
 
+  // ─── CORRECCIÓN DEL BUG: updatePattern fuera del render ──────────────────
+  // Guardamos una ref de si es la primera vez (no queremos llamar al montar)
+  const isFirstRender = useRef(true);
+  // El último patrón modificado para evitar llamar a todos a la vez
+  const lastModifiedPattern = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const patternId = lastModifiedPattern.current;
+    if (patternId && patternData[patternId]) {
+      updatePattern(patternId, patternData[patternId]);
+    }
+  }, [patternData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setFieldValue = useCallback(
     (patternId: string, fieldId: string, value: unknown) => {
-      setPatternData((prev) => {
-        const updated = {
-          ...prev,
-          [patternId]: {
-            ...(prev[patternId] || {}),
-            [fieldId]: value,
-          },
-        };
-        updatePattern(patternId, updated[patternId]);
-        return updated;
-      });
+      lastModifiedPattern.current = patternId;
+      setPatternData((prev) => ({
+        ...prev,
+        [patternId]: {
+          ...(prev[patternId] || {}),
+          [fieldId]: value,
+        },
+      }));
     },
-    [updatePattern]
+    []
   );
 
   const shouldShowField = (patternId: string, field: PatternField): boolean => {
@@ -89,16 +112,27 @@ export default function AssessmentScreen() {
   };
 
   const handleComplete = async () => {
+    const msg = `¿Deseas finalizar la valoración de ${currentPatient?.nombre}?\n\nSe detectaron ${suggestions.length} diagnóstico(s) sugerido(s).`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(msg);
+      if (confirmed) {
+        await completeAssessment();
+        router.replace('/(tabs)/history');
+      }
+      return;
+    }
+
     Alert.alert(
       'Completar Valoración',
-      `¿Deseas finalizar la valoración de ${currentPatient?.nombre}?\n\nSe detectaron ${suggestions.length} diagnóstico(s) sugerido(s).`,
+      msg,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Completar',
           onPress: async () => {
             await completeAssessment();
-            router.push('/assessment/results');
+            router.replace('/(tabs)/history');
           },
         },
       ]
@@ -310,7 +344,7 @@ export default function AssessmentScreen() {
 
       {/* Acordeones de Patrones */}
       <View style={styles.patternsContainer}>
-        {PATTERNS.filter((p) => p.isMvp).map((pattern, idx) => {
+        {PATTERNS.map((pattern, idx) => {
           const filledFields = Object.keys(patternData[pattern.id] || {}).length;
           const totalFields = pattern.fields.filter((f) => !f.showWhen).length;
           const progress = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;

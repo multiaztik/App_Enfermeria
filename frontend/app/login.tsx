@@ -25,10 +25,10 @@ const PIN_ICON = require('../assets/icons/pin.png');
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
+  const [userFocused, setUserFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
@@ -41,20 +41,18 @@ export default function LoginScreen() {
   }, [fadeAnim, slideAnim]);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Campos requeridos', 'Por favor ingresa tu correo y contraseña.');
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Campos requeridos', 'Por favor ingresa tu usuario y contraseña.');
       return;
     }
     try {
-      await login(email, password);
+      await login(username, password);
       router.replace('/(tabs)/home');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Error al iniciar sesión';
       Alert.alert(
         'Error de acceso',
-        msg === 'Credenciales inválidas'
-          ? 'Correo o contraseña incorrectos. Verifica tus datos.'
-          : msg
+        msg
       );
     }
   };
@@ -85,20 +83,19 @@ export default function LoginScreen() {
 
         {/* Formulario */}
         <Animated.View style={[styles.formSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          {/* Campo Correo */}
+          {/* Campo Usuario */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Correo</Text>
+            <Text style={styles.fieldLabel}>Usuario</Text>
             <TextInput
-              style={[styles.input, emailFocused && styles.inputFocused]}
-              placeholder="Su correo"
+              style={[styles.input, userFocused && styles.inputFocused]}
+              placeholder="Su usuario"
               placeholderTextColor={Colors.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              value={username}
+              onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
+              onFocus={() => setUserFocused(true)}
+              onBlur={() => setUserFocused(false)}
             />
           </View>
 

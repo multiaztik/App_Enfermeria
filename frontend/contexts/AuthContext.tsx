@@ -1,36 +1,35 @@
 /**
  * Contexto de Autenticación — BitCare
- * Conectado al backend FastAPI + MongoDB
- * Login / Register / Logout reales con JWT
+ * Login / Register / Logout locales con SQLite
+ * Sin servidor — todo se almacena en el dispositivo
  */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authApi } from '../utils/api';
+import { registerUser, loginUser, DBUser } from '../utils/database';
 
 interface User {
   id: string;
-  email: string;
+  username: string;
   nombre: string;
   role: string;
   cedula: string;
+  consentimiento_legal: boolean;
 }
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
 
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'LOGIN'; payload: { user: User; token: string } }
+  | { type: 'LOGIN'; payload: { user: User } }
   | { type: 'LOGOUT' }
-  | { type: 'RESTORE_SESSION'; payload: { user: User; token: string } };
+  | { type: 'RESTORE_SESSION'; payload: { user: User } };
 
 const initialState: AuthState = {
   user: null,
-  token: null,
   isLoading: true,
   isAuthenticated: false,
 };
@@ -44,7 +43,6 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return {
         ...state,
         user: action.payload.user,
-        token: action.payload.token,
         isAuthenticated: true,
         isLoading: false,
       };
@@ -56,17 +54,30 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: {
-    email: string;
+    username: string;
     password: string;
     nombre: string;
     cedula: string;
+    consentimiento_legal: boolean;
   }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Convierte DBUser a User del contexto */
+function dbUserToUser(dbUser: DBUser): User {
+  return {
+    id: String(dbUser.id),
+    username: dbUser.username,
+    nombre: dbUser.nombre,
+    role: dbUser.role,
+    cedula: dbUser.cedula,
+    consentimiento_legal: dbUser.consentimiento_legal,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -75,12 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const token = await AsyncStorage.getItem('auth_token');
         const userData = await AsyncStorage.getItem('user_data');
-        if (token && userData) {
+        if (userData) {
           dispatch({
             type: 'RESTORE_SESSION',
-            payload: { token, user: JSON.parse(userData) },
+            payload: { user: JSON.parse(userData) },
           });
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
@@ -93,26 +103,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Login real con FastAPI + MongoDB
-   * Guarda el token JWT y los datos del usuario en AsyncStorage
+   * Login local con SQLite
+   * Busca el usuario en la BD local y valida la contraseña
    */
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await authApi.login(email, password);
+      const dbUser = await loginUser(username, password);
+      const user = dbUserToUser(dbUser);
 
-      const user: User = {
-        id: response.user.id,
-        email: response.user.email,
-        nombre: response.user.nombre,
-        role: response.user.role,
-        cedula: response.user.cedula,
-      };
-
-      await AsyncStorage.setItem('auth_token', response.access_token);
       await AsyncStorage.setItem('user_data', JSON.stringify(user));
 
-      dispatch({ type: 'LOGIN', payload: { user, token: response.access_token } });
+      dispatch({ type: 'LOGIN', payload: { user } });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error; // re-lanzar para que el UI pueda mostrar el error
@@ -120,30 +122,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Registro real — crea usuario en MongoDB y hace login automático
+   * Registro local — crea usuario en SQLite y hace login automático
    */
   const register = async (data: {
-    email: string;
+    username: string;
     password: string;
     nombre: string;
     cedula: string;
+    consentimiento_legal: boolean;
   }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await authApi.register(data);
+      const dbUser = await registerUser(data);
+      const user = dbUserToUser(dbUser);
 
-      const user: User = {
-        id: response.user.id,
-        email: response.user.email,
-        nombre: response.user.nombre,
-        role: response.user.role,
-        cedula: response.user.cedula,
-      };
-
-      await AsyncStorage.setItem('auth_token', response.access_token);
       await AsyncStorage.setItem('user_data', JSON.stringify(user));
 
-      dispatch({ type: 'LOGIN', payload: { user, token: response.access_token } });
+      dispatch({ type: 'LOGIN', payload: { user } });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
@@ -155,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('user_data');
     } catch {
       // ignorar errores de storage en web
