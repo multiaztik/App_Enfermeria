@@ -16,10 +16,11 @@ interface AssessmentData {
   [key: string]: unknown;
 }
 
-/** Calcula el IMC a partir de peso (kg) y talla (m) */
-function calculateBMI(weight: number, height: number): number {
-  if (!weight || !height || height === 0) return 0;
-  return weight / (height * height);
+/** Calcula el IMC a partir de peso (kg) y talla en cm (se convierte a m internamente) */
+function calculateBMI(weight: number, heightCm: number): number {
+  if (!weight || !heightCm || heightCm === 0) return 0;
+  const heightM = heightCm / 100;
+  return weight / (heightM * heightM);
 }
 
 /** Reglas para el Patrón Nutricional-Metabólico */

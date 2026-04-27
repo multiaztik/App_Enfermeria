@@ -177,6 +177,15 @@ async function webGetAssessments(userId: number, patientId?: number): Promise<DB
   return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+async function webDeleteUser(userId: number): Promise<void> {
+  const db = await loadWebDB();
+  db.assessments = db.assessments.filter((a) => a.user_id !== userId);
+  db.patients = db.patients.filter((p) => p.user_id !== userId);
+  db.users = db.users.filter((u) => u.id !== userId);
+  await saveWebDB(db);
+  await AsyncStorage.removeItem('user_data');
+}
+
 /* ════════════════════════════════════════════════════════════════════════
    NATIVO — SQLite (Android / iOS)
    ════════════════════════════════════════════════════════════════════════ */
@@ -330,6 +339,14 @@ async function nativeGetAssessments(userId: number, patientId?: number): Promise
   return (rows as any[]).map((r) => ({ ...r, patterns: JSON.parse(r.patterns || '{}'), suggestions: JSON.parse(r.suggestions || '[]') }));
 }
 
+async function nativeDeleteUser(userId: number): Promise<void> {
+  const db = await getSQLiteDB();
+  await db.runAsync('DELETE FROM assessments WHERE user_id = ?', [userId]);
+  await db.runAsync('DELETE FROM patients WHERE user_id = ?', [userId]);
+  await db.runAsync('DELETE FROM users WHERE id = ?', [userId]);
+  await AsyncStorage.removeItem('user_data');
+}
+
 /* ════════════════════════════════════════════════════════════════════════
    API PÚBLICA — Se elige automáticamente según la plataforma
    ════════════════════════════════════════════════════════════════════════ */
@@ -345,3 +362,4 @@ export const updatePatient = isWeb ? webUpdatePatient : nativeUpdatePatient;
 export const deletePatient = isWeb ? webDeletePatient : nativeDeletePatient;
 export const saveAssessment = isWeb ? webSaveAssessment : nativeSaveAssessment;
 export const getAssessments = isWeb ? webGetAssessments : nativeGetAssessments;
+export const deleteUser = isWeb ? webDeleteUser : nativeDeleteUser;

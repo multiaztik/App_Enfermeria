@@ -19,7 +19,7 @@ type Sexo = 'M' | 'F';
 export default function EditPatientScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { loadPatients } = useAssessment();
+  const { loadPatients, loadAssessments } = useAssessment();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,8 +57,31 @@ export default function EditPatientScreen() {
   const addAlergia = () => {
     const tag = alergiaInput.trim();
     if (!tag || alergias.includes(tag)) { setAlergiaInput(''); return; }
-    setAlergias([...alergias, tag]);
-    setAlergiaInput('');
+
+    const confirmMsg = '¿Seguro que deseas agregar esta alergia? Esta ya no podrá ser editada o borrada.';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(confirmMsg);
+      if (confirmed) {
+        setAlergias([...alergias, tag]);
+        setAlergiaInput('');
+      }
+    } else {
+      Alert.alert(
+        'Confirmar alergia',
+        confirmMsg,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Agregar',
+            onPress: () => {
+              setAlergias([...alergias, tag]);
+              setAlergiaInput('');
+            },
+          },
+        ]
+      );
+    }
   };
 
   const validate = () => {
@@ -104,6 +127,7 @@ export default function EditPatientScreen() {
     try {
       await deletePatient(Number(id), Number(user?.id));
       await loadPatients();
+      await loadAssessments();
       setShowDelete(false);
       router.replace('/(tabs)/patients');
     } catch (e: unknown) {
@@ -172,8 +196,8 @@ export default function EditPatientScreen() {
             </Field>
           </View>
           <View style={{ flex: 1 }}>
-            <Field label="Talla (m)">
-              <TextInput style={styles.input} value={talla} onChangeText={setTalla} keyboardType="decimal-pad" placeholder="1.68" placeholderTextColor={Colors.textMuted} />
+            <Field label="Talla (cm)">
+              <TextInput style={styles.input} value={talla} onChangeText={setTalla} keyboardType="numeric" placeholder="168" placeholderTextColor={Colors.textMuted} />
             </Field>
           </View>
         </View>
@@ -194,10 +218,9 @@ export default function EditPatientScreen() {
           </View>
           <View style={styles.chips}>
             {alergias.map((tag) => (
-              <TouchableOpacity key={tag} style={styles.chip} onPress={() => setAlergias(alergias.filter(a => a !== tag))}>
+              <View key={tag} style={styles.chip}>
                 <Text style={styles.chipTxt}>{tag}</Text>
-                <Text style={styles.chipX}>×</Text>
-              </TouchableOpacity>
+              </View>
             ))}
           </View>
         </Field>

@@ -12,6 +12,7 @@ import {
   Animated,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAssessment } from '../../contexts/AssessmentContext';
@@ -59,8 +60,9 @@ export default function HomeScreen() {
   ).length;
 
   return (
+    <SafeAreaView style={styles.container} edges={['top']}>
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1 }}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
@@ -155,6 +157,7 @@ export default function HomeScreen() {
         <View style={styles.bottomSpacer} />
       </Animated.View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

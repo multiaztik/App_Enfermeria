@@ -1,6 +1,6 @@
 /**
  * Pantalla de Registro de Enfermero — BitCare
- * Crea una cuenta real en MongoDB y entra directamente a la app
+ * Crea una cuenta real en SQLite y muestra los términos antes de registrarse
  */
 import React, { useState, useRef } from 'react';
 import {
@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +33,7 @@ export default function RegisterScreen() {
   const [showPass, setShowPass] = useState(false);
   const [consentimiento, setConsentimiento] = useState(false);
   const [error, setError] = useState('');
+  const [showTerms, setShowTerms] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
 
@@ -57,7 +59,7 @@ export default function RegisterScreen() {
       return;
     }
     if (!consentimiento) {
-      setError('Debes aceptar el aviso de privacidad y consentimiento de investigación.');
+      setError('Debes aceptar el aviso de privacidad y consentimiento de participación.');
       return;
     }
     try {
@@ -67,6 +69,22 @@ export default function RegisterScreen() {
       const msg = e instanceof Error ? e.message : 'Error al registrarse';
       setError(msg);
     }
+  };
+
+  /** Abre el modal de términos; cuando se acepta, marca el checkbox */
+  const handleCheckboxPress = () => {
+    if (consentimiento) {
+      setConsentimiento(false);
+      setError('');
+    } else {
+      setShowTerms(true);
+    }
+  };
+
+  const handleAcceptTerms = () => {
+    setConsentimiento(true);
+    setShowTerms(false);
+    setError('');
   };
 
   return (
@@ -170,10 +188,10 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Consentimiento Legal — ARCO / LFPDPPP */}
+            {/* Consentimiento */}
             <TouchableOpacity
               style={styles.checkRow}
-              onPress={() => { setConsentimiento(!consentimiento); setError(''); }}
+              onPress={handleCheckboxPress}
               activeOpacity={0.7}
             >
               <View style={[styles.checkbox, consentimiento && styles.checkboxChecked]}>
@@ -182,8 +200,9 @@ export default function RegisterScreen() {
               <Text style={styles.checkLabel}>
                 He leído y acepto el{' '}
                 <Text style={styles.checkLink}>Aviso de Privacidad</Text>
-                {' '}(LFPDPPP y NOM-024-SSA3-2012) y consiento el uso de mis datos
-                con fines académicos de investigación — UAZ.
+                {' '}y el{' '}
+                <Text style={styles.checkLink}>Consentimiento de Participación</Text>
+                {' '}de BitCare.
               </Text>
             </TouchableOpacity>
 
@@ -214,6 +233,81 @@ export default function RegisterScreen() {
           </View>
         </Animated.View>
       </ScrollView>
+
+      {/* ─── MODAL DE TÉRMINOS Y CONDICIONES ──────────────────────────── */}
+      <Modal
+        visible={showTerms}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTerms(false)}
+      >
+        <View style={styles.termsOverlay}>
+          <View style={styles.termsSheet}>
+            <View style={styles.termsHandle} />
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.termsScroll}>
+              {/* Aviso de Privacidad */}
+              <Text style={styles.termsMainTitle}>🔒 Aviso de Privacidad</Text>
+
+              <Text style={styles.termsBody}>
+                <Text style={styles.termsBold}>Responsable:{'\n'}</Text>
+                {'El presente proyecto es desarrollado de forma independiente con fines académicos por el autor de la aplicación BitCare. No representa a ninguna institución ni organización de salud.\n\n'}
+                <Text style={styles.termsBold}>Datos recabados:{'\n'}</Text>
+                {'La aplicación puede almacenar información como nombre de usuario, identificadores internos y datos clínicos ingresados manualmente durante la valoración.\n\n'}
+                <Text style={styles.termsBold}>Finalidad del tratamiento:{'\n'}</Text>
+                {'Los datos se utilizan exclusivamente para:\n• Pruebas de funcionamiento de la aplicación\n• Simulación de procesos de valoración de enfermería\n• Evaluación de usabilidad con fines académicos\n\n'}
+                <Text style={styles.termsBold}>Almacenamiento de la información:{'\n'}</Text>
+                {'Toda la información se almacena únicamente en el dispositivo del usuario mediante una base de datos local. La aplicación no transmite, comparte ni sincroniza datos con servidores externos.\n\n'}
+                <Text style={styles.termsBold}>Privacidad por diseño:{'\n'}</Text>
+                {'La aplicación está diseñada para operar sin conexión a internet, reduciendo riesgos asociados a la transferencia de datos.\n\n'}
+                <Text style={styles.termsBold}>Responsabilidad del usuario:{'\n'}</Text>
+                {'El usuario es responsable del uso de la aplicación y de la información que decida ingresar. Se recomienda no introducir datos personales reales o sensibles en entornos de prueba.'}
+              </Text>
+
+              {/* Separador */}
+              <View style={styles.termsDivider} />
+
+              {/* Consentimiento de Participación */}
+              <Text style={styles.termsMainTitle}>📄 Consentimiento de Participación</Text>
+
+              <Text style={styles.termsBody}>
+                <Text style={styles.termsBold}>Consentimiento de Uso y Participación{'\n\n'}</Text>
+                {'Declaro que utilizo la aplicación BitCare de manera voluntaria con fines académicos y de prueba.\n\n'}
+                <Text style={styles.termsBold}>Entiendo y acepto que:{'\n'}</Text>
+                {'• La aplicación es un prototipo en desarrollo y no sustituye el juicio clínico profesional.\n'}
+                {'• Los resultados y sugerencias generados por el sistema son únicamente de carácter orientativo.\n'}
+                {'• La información ingresada es almacenada localmente en el dispositivo y no es monitoreada por terceros.\n'}
+                {'• Soy responsable del uso que haga de la aplicación y de los datos que decida registrar.\n'}
+                {'• No debo utilizar la aplicación para la gestión de pacientes reales en entornos clínicos oficiales.\n'}
+                {'• El uso de la aplicación se realiza bajo mi propio criterio y riesgo.\n\n'}
+                <Text style={styles.termsBold}>Asimismo, acepto que:{'\n'}</Text>
+                {'• Puedo dejar de utilizar la aplicación en cualquier momento.\n'}
+                {'• No existe relación contractual, médica ni institucional derivada del uso de esta herramienta.'}
+              </Text>
+
+              <View style={{ height: Spacing.xl }} />
+            </ScrollView>
+
+            {/* Botones */}
+            <View style={styles.termsBtns}>
+              <TouchableOpacity
+                style={styles.termsDeclineBtn}
+                onPress={() => setShowTerms(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.termsDeclineText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.termsAcceptBtn}
+                onPress={handleAcceptTerms}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.termsAcceptText}>Acepto los términos</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -311,4 +405,42 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   checkLink: { color: Colors.primary, fontWeight: '700' },
+  // Modal de términos
+  termsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  termsSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderTopRightRadius: BorderRadius.xxl,
+    maxHeight: '90%',
+    paddingTop: Spacing.md,
+  },
+  termsHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.md,
+  },
+  termsScroll: { paddingHorizontal: Spacing.xl },
+  termsMainTitle: {
+    fontSize: FontSize.lg, fontWeight: '800', color: Colors.text,
+    marginBottom: Spacing.md, marginTop: Spacing.sm,
+  },
+  termsBody: { fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 22 },
+  termsBold: { fontWeight: '700', color: Colors.text },
+  termsDivider: {
+    height: 1, backgroundColor: Colors.border,
+    marginVertical: Spacing.xl,
+  },
+  termsBtns: {
+    flexDirection: 'row', gap: Spacing.md, padding: Spacing.xl,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  termsDeclineBtn: {
+    flex: 1, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.card, alignItems: 'center', borderWidth: 1, borderColor: Colors.border,
+  },
+  termsDeclineText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textSecondary },
+  termsAcceptBtn: {
+    flex: 2, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.primary, alignItems: 'center',
+  },
+  termsAcceptText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
 });

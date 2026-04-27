@@ -17,6 +17,7 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../constants/colors';

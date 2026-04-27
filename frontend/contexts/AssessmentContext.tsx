@@ -128,6 +128,7 @@ interface AssessmentContextType extends AssessmentState {
   updatePattern: (patternId: string, data: Record<string, unknown>) => void;
   completeAssessment: () => Promise<void>;
   loadPatients: (search?: string) => Promise<void>;
+  loadAssessments: () => Promise<void>;
   loadMockPatients: () => void;
 }
 
@@ -219,6 +220,28 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
     loadPatients();
   };
 
+  /**
+   * Cargar valoraciones desde SQLite (filtradas por usuario logueado)
+   */
+  const loadAssessments = async () => {
+    if (!user) return;
+    try {
+      const dbAssessments = await dbGetAssessments(Number(user.id));
+      const assessments: Assessment[] = dbAssessments.map((a) => ({
+        id: String(a.id),
+        patientId: String(a.patient_id),
+        date: a.date,
+        nurseId: String(a.user_id),
+        patterns: a.patterns,
+        suggestions: a.suggestions as NandaDiagnosis[],
+        status: a.status as Assessment['status'],
+      }));
+      dispatch({ type: 'LOAD_ASSESSMENTS', payload: assessments });
+    } catch (error) {
+      console.error('Error cargando valoraciones:', error);
+    }
+  };
+
   return (
     <AssessmentContext.Provider
       value={{
@@ -229,6 +252,7 @@ export function AssessmentProvider({ children }: { children: React.ReactNode }) 
         updatePattern,
         completeAssessment,
         loadPatients,
+        loadAssessments,
         loadMockPatients,
       }}
     >

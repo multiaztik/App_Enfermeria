@@ -2,7 +2,7 @@
  * Pantalla de Historial de Valoraciones — BitCare
  * Tarjetas clickeables → abre modal con diagnósticos NANDA detallados
  */
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,37 +14,47 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useAssessment } from '../../contexts/AssessmentContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 import type { NandaDiagnosis } from '../../utils/nandaRules';
 import type { Assessment } from '../../contexts/AssessmentContext';
 
 const PATTERN_LABELS: Record<string, { name: string; icon: any }> = {
-  nutritional:      { name: 'Nutricional-Metabólico',       icon: require('../../assets/icons/estomago.png') },
-  sleep:            { name: 'Sueño-Descanso',               icon: require('../../assets/icons/cerebro.png') },
-  stress:           { name: 'Tolerancia al Estrés',         icon: require('../../assets/icons/cardiograma.png') },
-  perception:       { name: 'Percepción-Manejo de Salud',   icon: require('../../assets/icons/ojo.png') },
-  elimination:      { name: 'Eliminación',                  icon: require('../../assets/icons/donacion-de-sangre.png') },
-  activity:         { name: 'Actividad-Ejercicio',          icon: require('../../assets/icons/pecho.png') },
-  cognitive:        { name: 'Cognitivo-Perceptual',         icon: require('../../assets/icons/cerebro.png') },
-  self_perception:  { name: 'Autopercepción',               icon: require('../../assets/icons/enfermera.png') },
-  role:             { name: 'Rol-Relaciones',               icon: require('../../assets/icons/doctor.png') },
-  sexuality:        { name: 'Sexualidad',                   icon: require('../../assets/icons/utero.png') },
-  values:           { name: 'Valores-Creencias',            icon: require('../../assets/icons/historial-medico.png') },
+  nutritional: { name: 'Nutricional-Metabólico', icon: require('../../assets/icons/estomago.png') },
+  sleep: { name: 'Sueño-Descanso', icon: require('../../assets/icons/cerebro.png') },
+  stress: { name: 'Tolerancia al Estrés', icon: require('../../assets/icons/cardiograma.png') },
+  perception: { name: 'Percepción-Manejo de Salud', icon: require('../../assets/icons/ojo.png') },
+  elimination: { name: 'Eliminación', icon: require('../../assets/icons/donacion-de-sangre.png') },
+  activity: { name: 'Actividad-Ejercicio', icon: require('../../assets/icons/pecho.png') },
+  cognitive: { name: 'Cognitivo-Perceptual', icon: require('../../assets/icons/cerebro.png') },
+  self_perception: { name: 'Autopercepción', icon: require('../../assets/icons/enfermera.png') },
+  role: { name: 'Rol-Relaciones', icon: require('../../assets/icons/doctor.png') },
+  sexuality: { name: 'Sexualidad', icon: require('../../assets/icons/utero.png') },
+  values: { name: 'Valores-Creencias', icon: require('../../assets/icons/historial-medico.png') },
 };
 
 const PRIORITY_COLOR: Record<string, string> = {
-  high:   Colors.danger,
+  high: Colors.danger,
   medium: Colors.warning,
-  low:    Colors.success,
+  low: Colors.success,
 };
 const PRIORITY_LABEL: Record<string, string> = {
   high: 'Alta', medium: 'Media', low: 'Baja',
 };
 
 export default function HistoryScreen() {
-  const { assessments, patients } = useAssessment();
+  const { assessments, patients, loadAssessments, loadPatients } = useAssessment();
   const [selected, setSelected] = useState<Assessment | null>(null);
+
+  // Recarga automática cada vez que la tab recibe foco
+  useFocusEffect(
+    useCallback(() => {
+      loadAssessments();
+      loadPatients();
+    }, [])
+  );
 
   const getName = (id: string) =>
     patients.find((p) => p.id === id)?.nombre || 'Paciente desconocido';
@@ -61,7 +71,7 @@ export default function HistoryScreen() {
     new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -251,7 +261,7 @@ export default function HistoryScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

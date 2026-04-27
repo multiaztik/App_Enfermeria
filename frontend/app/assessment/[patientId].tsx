@@ -293,12 +293,7 @@ export default function AssessmentScreen() {
           <Text style={styles.patientInitials}>{initials}</Text>
         </View>
         <View style={styles.patientInfo}>
-          <View style={styles.patientNameRow}>
-            <Text style={styles.patientName}>{currentPatient.nombre}</Text>
-            <TouchableOpacity style={styles.editBtn} onPress={() => { }}>
-              <Text style={styles.editIcon}>✏</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.patientName}>{currentPatient.nombre}</Text>
           <Text style={styles.patientDetails}>
             {currentPatient.edad} años · {currentPatient.sexo === 'M' ? 'Masculino' : 'Femenino'}
           </Text>

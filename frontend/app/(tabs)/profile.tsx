@@ -1,6 +1,6 @@
 /**
  * Pantalla de Perfil del Enfermero — BitCare
- * Avatar con ícono PNG, info card, sección legal LFPDPPP, logout negro
+ * Avatar con ícono PNG, info card, aviso de privacidad, consentimiento, logout, eliminar cuenta
  */
 import React from 'react';
 import {
@@ -11,14 +11,18 @@ import {
   Image,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { Colors, BorderRadius, Spacing, FontSize, Shadows } from '../../constants/colors';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const [showConfirm, setShowConfirm] = React.useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = React.useState(false);
+  const [deletingAccount, setDeletingAccount] = React.useState(false);
   const [showPrivacy, setShowPrivacy] = React.useState(false);
   const [showConsent, setShowConsent] = React.useState(false);
 
@@ -27,196 +31,263 @@ export default function ProfileScreen() {
     router.replace('/login');
   };
 
-  const initials =
-    user?.nombre
-      ?.split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('') || '?';
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      setShowDeleteAccount(false);
+      router.replace('/login');
+    } catch {
+      setDeletingAccount(false);
+    }
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Perfil</Text>
-        <Image
-          source={require('../../assets/icons/doctor.png')}
-          style={styles.headerIcon}
-          resizeMode="contain"
-        />
-      </View>
-
-      {/* Avatar y nombre */}
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Perfil</Text>
           <Image
-            source={require('../../assets/icons/enfermera.png')}
-            style={styles.avatarImg}
+            source={require('../../assets/icons/doctor.png')}
+            style={styles.headerIcon}
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.name}>{user?.nombre || 'Usuario'}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>
-            {user?.role === 'nurse' ? 'Enfermero/a' : 'Estudiante'}
-          </Text>
-        </View>
-      </View>
 
-      {/* Información */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoRow}>
-          <View style={styles.infoIconWrap}>
+        {/* Avatar y nombre */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatar}>
             <Image
-              source={require('../../assets/icons/app-medica.png')}
-              style={styles.infoIcon}
+              source={require('../../assets/icons/enfermera.png')}
+              style={styles.avatarImg}
               resizeMode="contain"
             />
           </View>
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Usuario</Text>
-            <Text style={styles.infoValue}>{user?.username || '-'}</Text>
+          <Text style={styles.name}>{user?.nombre || 'Usuario'}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>
+              {user?.role === 'nurse' ? 'Enfermero/a' : 'Estudiante'}
+            </Text>
           </View>
         </View>
-        <View style={styles.separator} />
-        <View style={styles.infoRow}>
-          <View style={styles.infoIconWrap}>
-            <Image
-              source={require('../../assets/icons/historial-medico.png')}
-              style={styles.infoIcon}
-              resizeMode="contain"
-            />
+
+        {/* Información */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconWrap}>
+              <Image
+                source={require('../../assets/icons/app-medica.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Usuario</Text>
+              <Text style={styles.infoValue}>{user?.username || '-'}</Text>
+            </View>
           </View>
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Cédula Profesional</Text>
-            <Text style={styles.infoValue}>{user?.cedula || '-'}</Text>
+          <View style={styles.separator} />
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconWrap}>
+              <Image
+                source={require('../../assets/icons/historial-medico.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Cédula Profesional</Text>
+              <Text style={styles.infoValue}>{user?.cedula || '-'}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* ─── MARCO LEGAL E INVESTIGACIÓN ─── */}
-      <View style={styles.legalSection}>
-        <Text style={styles.legalSectionTitle}>⚖️ Marco Legal e Investigación</Text>
+        {/* ─── ACUERDOS LEGALES ─── */}
+        <View style={styles.legalSection}>
+          <Text style={styles.legalSectionTitle}>📋 Acuerdos Legales</Text>
 
-        {/* Badge de consentimiento */}
-        <View style={[
-          styles.consentBadge,
-          { backgroundColor: user?.consentimiento_legal ? Colors.success + '15' : Colors.warning + '15' }
-        ]}>
-          <Text style={[
-            styles.consentBadgeTitle,
-            { color: user?.consentimiento_legal ? Colors.success : Colors.warning }
+          {/* Badge de consentimiento */}
+          <View style={[
+            styles.consentBadge,
+            { backgroundColor: user?.consentimiento_legal ? Colors.success + '15' : Colors.warning + '15' }
           ]}>
-            {user?.consentimiento_legal ? '✓ Consentimiento otorgado' : '⚠ Sin consentimiento registrado'}
-          </Text>
-          <Text style={styles.consentBadgeSub}>
-            {user?.consentimiento_legal
-              ? 'Aceptado al momento del registro'
-              : 'El consentimiento no fue registrado en este perfil'}
-          </Text>
+            <Text style={[
+              styles.consentBadgeTitle,
+              { color: user?.consentimiento_legal ? Colors.success : Colors.warning }
+            ]}>
+              {user?.consentimiento_legal ? '✓ Consentimiento otorgado' : '⚠ Sin consentimiento registrado'}
+            </Text>
+            <Text style={styles.consentBadgeSub}>
+              {user?.consentimiento_legal
+                ? 'Aceptado al momento del registro'
+                : 'El consentimiento no fue registrado en este perfil'}
+            </Text>
+          </View>
+
+          {/* Aviso de Privacidad */}
+          <TouchableOpacity
+            style={styles.legalCard}
+            onPress={() => setShowPrivacy(!showPrivacy)}
+            activeOpacity={0.75}
+          >
+            <View style={styles.legalRow}>
+              <Text style={styles.legalCardIcon}>🔒</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.legalCardTitle}>Aviso de Privacidad</Text>
+                <Text style={styles.legalCardSub}>Versión corregida</Text>
+              </View>
+              <Text style={styles.legalChevron}>{showPrivacy ? '▲' : '▼'}</Text>
+            </View>
+            {showPrivacy && (
+              <View style={styles.legalBody}>
+                <Text style={styles.legalBodyText}>
+                  <Text style={styles.legalBold}>Responsable: </Text>
+                  {'El presente proyecto es desarrollado de forma independiente con fines académicos por el autor de la aplicación BitCare. No representa a ninguna institución ni organización de salud.\n\n'}
+                  <Text style={styles.legalBold}>Datos recabados: </Text>
+                  {'La aplicación puede almacenar información como nombre de usuario, identificadores internos y datos clínicos ingresados manualmente durante la valoración.\n\n'}
+                  <Text style={styles.legalBold}>Finalidad del tratamiento: </Text>
+                  {'Los datos se utilizan exclusivamente para:\n• Pruebas de funcionamiento de la aplicación\n• Simulación de procesos de valoración de enfermería\n• Evaluación de usabilidad con fines académicos\n\n'}
+                  <Text style={styles.legalBold}>Almacenamiento de la información: </Text>
+                  {'Toda la información se almacena únicamente en el dispositivo del usuario mediante una base de datos local. La aplicación no transmite, comparte ni sincroniza datos con servidores externos.\n\n'}
+                  <Text style={styles.legalBold}>Privacidad por diseño: </Text>
+                  {'La aplicación está diseñada para operar sin conexión a internet, reduciendo riesgos asociados a la transferencia de datos.\n\n'}
+                  <Text style={styles.legalBold}>Responsabilidad del usuario: </Text>
+                  {'El usuario es responsable del uso de la aplicación y de la información que decida ingresar. Se recomienda no introducir datos personales reales o sensibles en entornos de prueba.'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Consentimiento de Participación */}
+          <TouchableOpacity
+            style={styles.legalCard}
+            onPress={() => setShowConsent(!showConsent)}
+            activeOpacity={0.75}
+          >
+            <View style={styles.legalRow}>
+              <Text style={styles.legalCardIcon}>📄</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.legalCardTitle}>Consentimiento de Participación</Text>
+                <Text style={styles.legalCardSub}>Versión fuerte y protegida</Text>
+              </View>
+              <Text style={styles.legalChevron}>{showConsent ? '▲' : '▼'}</Text>
+            </View>
+            {showConsent && (
+              <View style={styles.legalBody}>
+                <Text style={styles.legalBodyText}>
+                  <Text style={styles.legalBold}>Consentimiento de Uso y Participación{'\n\n'}</Text>
+                  {'Declaro que utilizo la aplicación BitCare de manera voluntaria con fines académicos y de prueba.\n\n'}
+                  <Text style={styles.legalBold}>Entiendo y acepto que:{'\n'}</Text>
+                  {'• La aplicación es un prototipo en desarrollo y no sustituye el juicio clínico profesional.\n'}
+                  {'• Los resultados y sugerencias generados por el sistema son únicamente de carácter orientativo.\n'}
+                  {'• La información ingresada es almacenada localmente en el dispositivo y no es monitoreada por terceros.\n'}
+                  {'• Soy responsable del uso que haga de la aplicación y de los datos que decida registrar.\n'}
+                  {'• No debo utilizar la aplicación para la gestión de pacientes reales en entornos clínicos oficiales.\n'}
+                  {'• El uso de la aplicación se realiza bajo mi propio criterio y riesgo.\n\n'}
+                  <Text style={styles.legalBold}>Asimismo, acepto que:{'\n'}</Text>
+                  {'• Puedo dejar de utilizar la aplicación en cualquier momento.\n'}
+                  {'• No existe relación contractual, médica ni institucional derivada del uso de esta herramienta.'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* Aviso de Privacidad */}
+        {/* Botón Cerrar Sesión */}
         <TouchableOpacity
-          style={styles.legalCard}
-          onPress={() => setShowPrivacy(!showPrivacy)}
-          activeOpacity={0.75}
+          style={styles.logoutButton}
+          onPress={() => setShowConfirm(true)}
+          activeOpacity={0.85}
         >
-          <View style={styles.legalRow}>
-            <Text style={styles.legalCardIcon}>📄</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.legalCardTitle}>Aviso de Privacidad Integral</Text>
-              <Text style={styles.legalCardSub}>LFPDPPP • NOM-024-SSA3-2012</Text>
-            </View>
-            <Text style={styles.legalChevron}>{showPrivacy ? '▲' : '▼'}</Text>
-          </View>
-          {showPrivacy && (
-            <View style={styles.legalBody}>
-              <Text style={styles.legalBodyText}>
-                <Text style={styles.legalBold}>Responsable: </Text>
-                {'Facultad de Ingeniería, UAZ.\n\n'}
-                <Text style={styles.legalBold}>Datos recabados: </Text>
-                {'Nombre de usuario, cédula profesional y datos clínicos de pacientes en formatos de valoración.\n\n'}
-                <Text style={styles.legalBold}>Finalidad: </Text>
-                {'Gestión interna de valoraciones de enfermería con fines académicos y de investigación de usabilidad de software.\n\n'}
-                <Text style={styles.legalBold}>Almacenamiento: </Text>
-                {'Datos almacenados exclusivamente en este dispositivo (SQLite local). No se transmiten a servidores externos.\n\n'}
-                <Text style={styles.legalBold}>Derechos ARCO: </Text>
-                {'Puede ejercer sus derechos de Acceso, Rectificación, Cancelación y Oposición contactando al responsable del proyecto.'}
-              </Text>
-            </View>
-          )}
+          <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
 
-        {/* Consentimiento de Investigación */}
+        {/* Botón Eliminar Cuenta */}
         <TouchableOpacity
-          style={styles.legalCard}
-          onPress={() => setShowConsent(!showConsent)}
-          activeOpacity={0.75}
+          style={styles.deleteAccountButton}
+          onPress={() => setShowDeleteAccount(true)}
+          activeOpacity={0.85}
         >
-          <View style={styles.legalRow}>
-            <Text style={styles.legalCardIcon}>🔬</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.legalCardTitle}>Consentimiento de Investigación</Text>
-              <Text style={styles.legalCardSub}>Proyecto BitCare — Tesis UAZ</Text>
-            </View>
-            <Text style={styles.legalChevron}>{showConsent ? '▲' : '▼'}</Text>
-          </View>
-          {showConsent && (
-            <View style={styles.legalBody}>
-              <Text style={styles.legalBodyText}>
-                {'Declaro que participo '}
-                <Text style={styles.legalBold}>voluntariamente</Text>
-                {' en el proyecto de investigación "BitCare" de la Facultad de Ingeniería de la UAZ.\n\nEntiendo que:\n• El sistema recopila datos sobre mi interacción con la interfaz.\n• La información se utiliza exclusivamente con fines académicos.\n• Puedo retirarme del proyecto en cualquier momento eliminando mi cuenta.\n• Los datos no serán distribuidos ni vendidos a terceros.\n\nEste consentimiento fue otorgado al momento del registro en la aplicación.'}
-              </Text>
-            </View>
-          )}
+          <Text style={styles.deleteAccountText}>🗑 Eliminar Cuenta</Text>
+          <Text style={styles.deleteAccountSub}>Se borrarán todos tus datos permanentemente</Text>
         </TouchableOpacity>
-      </View>
 
-      {/* Botón Cerrar Sesión */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={() => setShowConfirm(true)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.logoutText}>Cerrar Sesión</Text>
-      </TouchableOpacity>
+        <Text style={styles.version}>BitCare v1.0.0 • Patrones de Gordon</Text>
+        <View style={{ height: 30 }} />
 
-      <Text style={styles.version}>BitCare v1.0.0 • Patrones de Gordon</Text>
-      <View style={{ height: 30 }} />
-
-      {/* Modal de confirmación — funciona en web y móvil */}
-      <Modal
-        visible={showConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirm(false)}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>Cerrar Sesión</Text>
-            <Text style={styles.confirmMsg}>¿Estás seguro de que deseas salir?</Text>
-            <View style={styles.confirmBtns}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setShowConfirm(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.cancelBtnText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.confirmLogoutBtn}
-                onPress={handleLogout}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.confirmLogoutText}>Salir</Text>
-              </TouchableOpacity>
+        {/* Modal de confirmación logout */}
+        <Modal
+          visible={showConfirm}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowConfirm(false)}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.confirmCard}>
+              <Text style={styles.confirmTitle}>Cerrar Sesión</Text>
+              <Text style={styles.confirmMsg}>¿Estás seguro de que deseas salir?</Text>
+              <View style={styles.confirmBtns}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setShowConfirm(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmLogoutBtn}
+                  onPress={handleLogout}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.confirmLogoutText}>Salir</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        </Modal>
+
+        {/* Modal de confirmación eliminar cuenta */}
+        <Modal
+          visible={showDeleteAccount}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDeleteAccount(false)}
+        >
+          <View style={styles.overlay}>
+            <View style={styles.confirmCard}>
+              <Text style={{ fontSize: 40, marginBottom: Spacing.md }}>⚠️</Text>
+              <Text style={styles.confirmTitle}>Eliminar Cuenta</Text>
+              <Text style={styles.confirmMsg}>
+                Esta acción eliminará permanentemente tu cuenta, todos tus pacientes y todas las valoraciones registradas.{'\n\n'}Esta acción NO se puede deshacer.
+              </Text>
+              <View style={styles.confirmBtns}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setShowDeleteAccount(false)}
+                  activeOpacity={0.8}
+                  disabled={deletingAccount}
+                >
+                  <Text style={styles.cancelBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmDeleteBtn}
+                  onPress={handleDeleteAccount}
+                  activeOpacity={0.8}
+                  disabled={deletingAccount}
+                >
+                  {deletingAccount ? (
+                    <ActivityIndicator color={Colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.confirmDeleteText}>Eliminar todo</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -290,6 +361,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderWidth: 1.5, borderColor: Colors.danger + '40',
   },
   logoutText: { fontSize: FontSize.md, color: Colors.danger, fontWeight: '700' },
+  // Delete Account
+  deleteAccountButton: {
+    marginHorizontal: Spacing.xl, backgroundColor: Colors.danger,
+    borderRadius: BorderRadius.xl, paddingVertical: Spacing.lg,
+    alignItems: 'center', marginTop: Spacing.md,
+  },
+  deleteAccountText: { fontSize: FontSize.md, color: Colors.white, fontWeight: '700' },
+  deleteAccountSub: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
   version: { textAlign: 'center', fontSize: FontSize.xs, color: Colors.textMuted, marginTop: Spacing.xl },
   // Modal
   overlay: {
@@ -313,4 +392,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.danger, alignItems: 'center',
   },
   confirmLogoutText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
+  confirmDeleteBtn: {
+    flex: 1, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.danger, alignItems: 'center',
+  },
+  confirmDeleteText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
 });

@@ -5,7 +5,7 @@
  */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { registerUser, loginUser, DBUser } from '../utils/database';
+import { registerUser, loginUser, deleteUser, DBUser } from '../utils/database';
 
 interface User {
   id: string;
@@ -63,6 +63,7 @@ interface AuthContextType extends AuthState {
     cedula: string;
     consentimiento_legal: boolean;
   }) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -157,8 +158,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'LOGOUT' });
   };
 
+  /**
+   * Eliminar cuenta — borra todos los datos del usuario de la BD y cierra sesión
+   */
+  const deleteAccount = async () => {
+    if (!state.user) return;
+    try {
+      await deleteUser(Number(state.user.id));
+    } catch (error) {
+      console.error('Error eliminando cuenta:', error);
+    }
+    dispatch({ type: 'LOGOUT' });
+  };
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, register }}>
+    <AuthContext.Provider value={{ ...state, login, logout, register, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

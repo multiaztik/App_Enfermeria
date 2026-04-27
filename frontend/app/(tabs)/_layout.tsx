@@ -1,9 +1,10 @@
 /**
  * Layout de tabs — Barra de navegación BitCare
- * Íconos PNG del paquete de assets
+ * Íconos PNG del paquete de assets + SafeArea
  */
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/colors';
 
 function TabIcon({
@@ -30,6 +31,8 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -45,8 +48,8 @@ export default function TabsLayout() {
           backgroundColor: Colors.primary,
           borderTopColor: Colors.primary,
           borderTopWidth: 0,
-          height: 70,
-          paddingBottom: 8,
+          height: 70 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 8,
         },
         tabBarShowLabel: false,

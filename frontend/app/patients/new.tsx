@@ -77,11 +77,29 @@ export default function NewPatientScreen() {
       setForm((f) => ({ ...f, alergiaInput: '' }));
       return;
     }
-    setForm((f) => ({ ...f, alergias: [...f.alergias, tag], alergiaInput: '' }));
-  };
 
-  const removeAlergia = (tag: string) => {
-    setForm((f) => ({ ...f, alergias: f.alergias.filter((a) => a !== tag) }));
+    const confirmMsg = '¿Seguro que deseas agregar esta alergia? Esta ya no podrá ser editada o borrada.';
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(confirmMsg);
+      if (confirmed) {
+        setForm((f) => ({ ...f, alergias: [...f.alergias, tag], alergiaInput: '' }));
+      }
+    } else {
+      Alert.alert(
+        'Confirmar alergia',
+        confirmMsg,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Agregar',
+            onPress: () => {
+              setForm((f) => ({ ...f, alergias: [...f.alergias, tag], alergiaInput: '' }));
+            },
+          },
+        ]
+      );
+    }
   };
 
   /* ── Validación ── */
@@ -220,14 +238,14 @@ export default function NewPatientScreen() {
             </FieldGroup>
           </View>
           <View style={styles.rowItem}>
-            <FieldGroup label="Talla (m)" error={errors.talla}>
+            <FieldGroup label="Talla (cm)" error={errors.talla}>
               <TextInput
                 style={[styles.input, errors.talla && styles.inputError]}
-                placeholder="1.68"
+                placeholder="168"
                 placeholderTextColor={Colors.textMuted}
                 value={form.talla}
                 onChangeText={(v) => update('talla', v)}
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
               />
             </FieldGroup>
           </View>
@@ -267,20 +285,17 @@ export default function NewPatientScreen() {
           {form.alergias.length > 0 && (
             <View style={styles.alergiaChips}>
               {form.alergias.map((tag) => (
-                <TouchableOpacity
+                <View
                   key={tag}
                   style={styles.chip}
-                  onPress={() => removeAlergia(tag)}
-                  activeOpacity={0.7}
                 >
                   <Text style={styles.chipText}>{tag}</Text>
-                  <Text style={styles.chipX}>×</Text>
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
           {form.alergias.length === 0 && (
-            <Text style={styles.alergiaHint}>Toca + para agregar • Toca el chip para eliminar</Text>
+            <Text style={styles.alergiaHint}>Toca + para agregar una alergia</Text>
           )}
         </FieldGroup>
 
